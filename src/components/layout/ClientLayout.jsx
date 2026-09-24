@@ -3,7 +3,8 @@ import { Outlet } from 'react-router-dom';
 import FormModal from '../base/FormModal';
 import { AbonosProvider } from '../../context/AbonosContext';
 import { CartProvider } from '../../context/CartContext';
-import { clientProfile, tiposDocumento } from '../../data/mockData';
+import { useSesion } from '../../context/SesionContext';
+import { tiposDocumento } from '../../data/mockData';
 import ClientNavbar from './ClientNavbar';
 
 // -------------------------------------------------------------------------
@@ -21,8 +22,8 @@ const perfilSections = [
     title: 'Datos personales',
     fields: [
       { key: 'nombre', label: 'Nombre completo', required: true, span: 2 },
-      { key: 'tipoDoc', label: 'Tipo de documento', type: 'select', required: true, options: tiposDocumento },
-      { key: 'numDoc', label: 'Número de documento', required: true },
+      { key: 'tipoDocumento', label: 'Tipo de documento', type: 'select', required: true, options: tiposDocumento },
+      { key: 'numeroDocumento', label: 'Número de documento', type: 'number', required: true },
       { key: 'correo', label: 'Correo electrónico', type: 'email', required: true },
       { key: 'telefono', label: 'Teléfono', type: 'tel' },
     ],
@@ -43,15 +44,17 @@ const perfilSections = [
 ];
 
 export default function ClientLayout() {
-  const [profile, setProfile] = useState(clientProfile);
+  const { correo, profile: perfilSesion, abonos } = useSesion();
+  const [profile, setProfile] = useState(perfilSesion);
   const [perfilOpen, setPerfilOpen] = useState(false);
 
+  // Al cambiar de cuenta de prueba se rehacen el carrito y los abonos
   return (
-    <CartProvider>
-      <AbonosProvider>
+    <CartProvider key={correo}>
+      <AbonosProvider iniciales={abonos}>
         <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-brand-navy-900">
-          <ClientNavbar profile={profile} onOpenProfile={() => setPerfilOpen(true)} />
-          <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 sm:px-6 sm:py-8">
+          <ClientNavbar profile={profile} onEditarPerfil={() => setPerfilOpen(true)} />
+          <main className="ml-vista mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 sm:px-6 sm:py-8">
             <Outlet />
           </main>
           <footer className="border-t border-slate-200 py-5 text-center text-xs text-slate-400 dark:border-white/10 dark:text-slate-500">

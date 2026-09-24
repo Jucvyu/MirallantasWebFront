@@ -1,15 +1,18 @@
 import { useMemo, useState } from 'react';
 import { ArrowDownWideNarrow, Search, SlidersHorizontal } from 'lucide-react';
 import Dropdown from '../Dropdown';
+import { INPUT } from '../formStyles';
 import EmptyState from '../EmptyState';
 
 /**
  * Listado en formato de cartas para el portal de cliente.
  *
  * - Buscador sobre los campos indicados en `searchKeys` (o sobre todos).
- * - Filtros por campo: cada uno arma sus opciones a partir de los datos.
- *   Un filtro puede traer su propio `match(item, valor)` cuando el dato no
- *   está plano en el objeto (p. ej. buscar por el estado de la entrega).
+ * - Filtros por campo: cada uno arma sus opciones a partir de los datos y
+ *   admite varias marcadas a la vez (la carta entra si coincide con
+ *   cualquiera). Un filtro puede traer su propio `match(item, valor)`
+ *   cuando el dato no está plano en el objeto (p. ej. el estado de la
+ *   entrega).
  * - Orden opcional mediante `sortOptions`.
  * - Paginación: solo aparece cuando hay más registros que `pageSize` (10).
  *
@@ -56,12 +59,12 @@ export default function CardList({
         !q ||
         (searchKeys ?? Object.keys(item)).some((k) => String(item[k] ?? '').toLowerCase().includes(q));
 
-      const matchesFilters = Object.entries(active).every(([k, v]) => {
-        if (!v) return true;
+      const matchesFilters = Object.entries(active).every(([k, valores]) => {
+        if (!valores?.length) return true;
         const definicion = filters.find((f) => f.key === k);
         // Un filtro con `match` decide por su cuenta (datos anidados)
-        if (definicion?.match) return definicion.match(item, v);
-        return String(item[k]) === v;
+        if (definicion?.match) return valores.some((v) => definicion.match(item, v));
+        return valores.includes(String(item[k]));
       });
 
       return matchesQuery && matchesFilters;
@@ -88,8 +91,8 @@ export default function CardList({
     : '';
 
   const controlClass = stickyToolbar
-    ? 'border-slate-200/70 bg-white/70 dark:border-white/5 dark:bg-brand-navy-800/60'
-    : 'border-slate-200 bg-white dark:border-white/10 dark:bg-brand-navy-800';
+    ? 'border-slate-200/70 bg-white/70 focus:border-amber-400 dark:border-white/5 dark:bg-brand-navy-800/60'
+    : 'border-slate-200 bg-white hover:border-slate-300 focus:border-amber-400 dark:border-white/10 dark:bg-brand-navy-800 dark:hover:border-white/20';
 
   return (
     <div>
@@ -105,7 +108,7 @@ export default function CardList({
                 setPage(1);
               }}
               placeholder="Buscar..."
-              className={`w-full rounded-lg border py-2 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/30 dark:text-slate-200 ${controlClass}`}
+              className={`${INPUT} ${controlClass} py-2 pl-9 pr-3`}
             />
           </div>
 
@@ -113,9 +116,10 @@ export default function CardList({
             <Dropdown
               key={f.key}
               label={f.label}
-              value={active[f.key] ?? ''}
+              multiple
+              value={active[f.key] ?? []}
               options={f.options}
-              onChange={(valor) => setFilter(f.key, valor)}
+              onChange={(valores) => setFilter(f.key, valores)}
               icon={<SlidersHorizontal size={13} className="shrink-0 opacity-70" />}
               subtle={stickyToolbar}
             />

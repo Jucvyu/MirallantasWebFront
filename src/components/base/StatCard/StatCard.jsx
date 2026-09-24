@@ -5,6 +5,7 @@ const ACCENTS = {
   blue: 'bg-blue-500/15 text-blue-500 dark:text-blue-400',
   emerald: 'bg-emerald-500/15 text-emerald-500 dark:text-emerald-400',
   violet: 'bg-violet-500/15 text-violet-500 dark:text-violet-400',
+  red: 'bg-red-500/15 text-red-500 dark:text-red-400',
 };
 
 export default function StatCard({ label, value, sub, trend, trendUp, icon, accent = 'amber' }) {
@@ -12,7 +13,7 @@ export default function StatCard({ label, value, sub, trend, trendUp, icon, acce
   const TrendIcon = trendUp ? Icons.TrendingUp : Icons.TrendingDown;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-brand-navy-800">
+    <div className="ml-tarjeta rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-brand-navy-800">
       <div className="flex items-start justify-between">
         <p className="text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
         <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${ACCENTS[accent]}`}>

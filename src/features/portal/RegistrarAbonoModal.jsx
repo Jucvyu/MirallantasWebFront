@@ -3,25 +3,26 @@ import { Check, ChevronDown, ImagePlus, Wallet, X } from 'lucide-react';
 import Badge from '../../components/base/Badge';
 import Modal from '../../components/base/Modal';
 import { formatCOP, parseCOP } from '../../context/AbonosContext';
-import { clientCreditos, metodosPago } from '../../data/mockData';
+import { useSesion } from '../../context/SesionContext';
+import { mediosPago } from '../../data/mockData';
 
-const INPUT =
-  'w-full rounded-lg border bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 ' +
-  'focus:outline-none focus:ring-2 focus:ring-amber-400/40 ' +
-  'dark:bg-brand-navy-900 dark:text-slate-100 dark:placeholder:text-slate-500';
-const BORDER_OK = 'border-slate-200 focus:border-amber-400 dark:border-white/10';
-const BORDER_ERR = 'border-red-400 dark:border-red-500/60';
-const LABEL = 'mb-1.5 block text-[13px] font-semibold text-slate-700 dark:text-slate-200';
-const SECTION = 'text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500';
+import {
+  BORDER_ERR,
+  BORDER_OK,
+  INPUT,
+  LABEL,
+  SECTION,
+  formatoMiles,
+} from '../../components/base/formStyles';
 
 /**
  * Registro de un abono desde el portal.
  *
  * El abono siempre se aplica al crédito desde el que se abrió el modal
  * (`creditoId`), así que aquí no se elige: solo se muestra a cuál va. El
- * cliente indica el monto y adjunta el pantallazo de la consignación; la
- * fecha la pone el sistema y el número de comprobante lo registra el
- * asesor al confirmar el pago.
+ * cliente indica el monto y, si paga por transferencia, adjunta el
+ * pantallazo de la consignación; la fecha la pone el sistema y el asesor
+ * valida el soporte al confirmar el pago.
  */
 export default function RegistrarAbonoModal({ creditoId, onSubmit, onClose }) {
   const [monto, setMonto] = useState('');
@@ -30,10 +31,12 @@ export default function RegistrarAbonoModal({ creditoId, onSubmit, onClose }) {
   const [errors, setErrors] = useState({});
   const fileInput = useRef(null);
 
-  const credito = clientCreditos.find((c) => c.id === creditoId);
-  // El pago en efectivo se hace en el local, así que no hay pantallazo.
-  const requiereSoporte = metodo !== '' && metodo !== 'Efectivo';
-  const saldoActual = parseCOP(credito?.saldo);
+  const { creditos } = useSesion();
+  const credito = creditos.find((c) => c.id === creditoId);
+  // El pantallazo solo tiene sentido en transferencia: el efectivo se paga
+  // en el local y la tarjeta deja su propio recibo.
+  const requiereSoporte = metodo === 'Transferencia';
+  const saldoActual = parseCOP(credito?.saldoPendiente);
   const montoNum = parseCOP(monto);
 
   const handleFile = (e) => {
@@ -60,10 +63,10 @@ export default function RegistrarAbonoModal({ creditoId, onSubmit, onClose }) {
       credito: creditoId,
       fecha: new Date().toISOString().slice(0, 10),
       monto: formatCOP(montoNum),
-      saldo: formatCOP(Math.max(0, saldoActual - montoNum)),
-      metodo,
-      comprobante: '—',
-      soporte: requiereSoporte ? soporte : '',
+      saldoPendiente: formatCOP(Math.max(0, saldoActual - montoNum)),
+      metodoPago: metodo,
+      // La consignación es el comprobante que el asesor debe validar
+      comprobante: requiereSoporte ? soporte : '',
       estado: 'Pendiente',
     });
     close();
@@ -103,14 +106,14 @@ export default function RegistrarAbonoModal({ creditoId, onSubmit, onClose }) {
               <div>
                 <p className="text-sm font-bold text-slate-900 dark:text-white">{credito.id}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {credito.pedido} · vence el {credito.limite}
+                  {credito.cotizacion} · vence el {credito.fechaLimite}
                 </p>
               </div>
               <Badge>{credito.estado}</Badge>
             </div>
             <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-200 pt-3 text-sm dark:border-white/10">
               <span className="text-slate-500 dark:text-slate-400">Saldo pendiente</span>
-              <span className="font-bold text-slate-800 dark:text-slate-100">{credito.saldo}</span>
+              <span className="font-bold text-slate-800 dark:text-slate-100">{credito.saldoPendiente}</span>
             </div>
           </div>
         )}
@@ -134,7 +137,8 @@ export default function RegistrarAbonoModal({ creditoId, onSubmit, onClose }) {
                 <input
                   id="ab-monto"
                   value={monto}
-                  onChange={(e) => setMonto(e.target.value)}
+                  inputMode="numeric"
+                  onChange={(e) => setMonto(formatoMiles(e.target.value))}
                   placeholder="500000"
                   className={`${INPUT} ${errors.monto ? BORDER_ERR : BORDER_OK} pl-7`}
                 />
@@ -166,7 +170,7 @@ export default function RegistrarAbonoModal({ creditoId, onSubmit, onClose }) {
                   className={`${INPUT} ${errors.metodo ? BORDER_ERR : BORDER_OK} appearance-none pr-9`}
                 >
                   <option value="">Seleccionar...</option>
-                  {metodosPago.map((m) => (
+                  {mediosPago.map((m) => (
                     <option key={m} value={m}>
                       {m}
                     </option>
@@ -182,7 +186,7 @@ export default function RegistrarAbonoModal({ creditoId, onSubmit, onClose }) {
           </div>
         </section>
 
-        {/* ---- Soporte de la consignación: no aplica en efectivo ---- */}
+        {/* ---- Soporte de la consignación: solo en transferencia ---- */}
         {requiereSoporte && (
         <section>
           <div className="mb-3 flex items-center gap-3">

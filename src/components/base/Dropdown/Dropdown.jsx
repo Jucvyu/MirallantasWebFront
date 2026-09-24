@@ -17,6 +17,8 @@ import { Check, ChevronDown } from 'lucide-react';
  *   allLabel  texto de la opción que limpia el filtro
  *   icon      icono opcional a la izquierda del botón
  *   subtle    variante de menor contraste, para la barra fija
+ *   multiple  permite marcar varias opciones a la vez; entonces `value` es
+ *             un arreglo y el panel no se cierra al elegir
  */
 export default function Dropdown({
   label,
@@ -26,6 +28,7 @@ export default function Dropdown({
   allLabel = 'Todos',
   icon = null,
   subtle = false,
+  multiple = false,
 }) {
   const [abierto, setAbierto] = useState(false);
   const contenedor = useRef(null);
@@ -50,12 +53,39 @@ export default function Dropdown({
     };
   }, [abierto]);
 
+  // En modo múltiple el valor es un arreglo y el panel queda abierto para
+  // poder marcar varias opciones seguidas.
+  const seleccionadas = multiple ? value ?? [] : [];
+  const estaMarcada = (opcion) => (multiple ? seleccionadas.includes(opcion) : opcion === value);
+
   const elegir = (opcion) => {
-    onChange(opcion);
-    setAbierto(false);
+    if (!multiple) {
+      onChange(opcion);
+      setAbierto(false);
+      return;
+    }
+    onChange(
+      seleccionadas.includes(opcion)
+        ? seleccionadas.filter((v) => v !== opcion)
+        : [...seleccionadas, opcion],
+    );
   };
 
-  const activo = Boolean(value);
+  const limpiar = () => {
+    onChange(multiple ? [] : '');
+    if (!multiple) setAbierto(false);
+  };
+
+  const activo = multiple ? seleccionadas.length > 0 : Boolean(value);
+
+  // Texto del botón: "Todos", la opción elegida o "N seleccionados"
+  const resumen = multiple
+    ? seleccionadas.length === 0
+      ? allLabel
+      : seleccionadas.length === 1
+        ? seleccionadas[0]
+        : `${seleccionadas.length} seleccionados`
+    : value || allLabel;
 
   // La variante "subtle" se usa en la barra fija del portal, donde el
   // control no debe competir con las cartas.
@@ -79,7 +109,7 @@ export default function Dropdown({
       >
         {icon}
         <span className="whitespace-nowrap">
-          {label}: {value || allLabel}
+          {label}: {resumen}
         </span>
         <ChevronDown
           size={14}
@@ -99,16 +129,16 @@ export default function Dropdown({
             <button
               type="button"
               role="option"
-              aria-selected={!value}
-              onClick={() => elegir('')}
+              aria-selected={!activo}
+              onClick={limpiar}
               className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors ${
-                !value
+                !activo
                   ? 'bg-amber-400/15 text-amber-600 dark:text-amber-400'
                   : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5'
               }`}
             >
               {allLabel}
-              {!value && <Check size={13} className="shrink-0" />}
+              {!activo && <Check size={13} className="shrink-0" />}
             </button>
           </li>
 
@@ -116,7 +146,7 @@ export default function Dropdown({
           <li aria-hidden="true" className="my-1 h-px bg-slate-100 dark:bg-white/10" />
 
           {options.map((opcion) => {
-            const seleccionada = opcion === value;
+            const seleccionada = estaMarcada(opcion);
             return (
               <li key={opcion}>
                 <button

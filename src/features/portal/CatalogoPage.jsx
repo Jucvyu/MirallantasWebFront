@@ -1,38 +1,49 @@
 import { useMemo, useState } from 'react';
-import { Check, ChevronDown, Plus, Search, ShoppingCart } from 'lucide-react';
+import { Check, Plus, Search, ShoppingCart, SlidersHorizontal } from 'lucide-react';
+import Dropdown from '../../components/base/Dropdown';
 import TireThumb from '../../components/base/TireThumb';
 import Modal from '../../components/base/Modal';
+import { BORDER_OK, INPUT } from '../../components/base/formStyles';
 import { useCart } from '../../context/CartContext';
-import { productos } from '../../data/mockData';
+import { categorias, productos } from '../../data/mockData';
 import PedidoPanel from './PedidoPanel';
 
 const FILTERS = [
   { key: 'marca', label: 'Marca' },
-  { key: 'vehiculo', label: 'Tipo vehículo' },
-  { key: 'medida', label: 'Medida' },
+  { key: 'tipoVehiculo', label: 'Tipo vehículo' },
+  { key: 'medidas', label: 'Medida' },
   { key: 'categoria', label: 'Categoría' },
 ];
 
+/** Color configurado para cada categoría desde la gestión del admin. */
+const COLOR_CATEGORIA = Object.fromEntries(categorias.map((c) => [c.nombre, c.color]));
+
+const pesos = (n) => `$ ${Number(n || 0).toLocaleString('es-CO')}`;
+
+/** Un producto inactivo ya no se comercializa: no entra al catálogo. */
+const CATALOGO = productos.filter((p) => p.estado === 'Activo');
+
 export default function CatalogoPage() {
   const [query, setQuery] = useState('');
+  // Cada filtro guarda un arreglo: se pueden marcar varias opciones
   const [active, setActive] = useState({});
   const [selected, setSelected] = useState(null);
   const [added, setAdded] = useState(null);
-  // Al abrirlo, el catálogo se parte en dos: catálogo a la izquierda y el
-  // pedido-cotización a la derecha.
+  // Al abrirlo, el catálogo se parte en dos: catálogo a la izquierda y la
+  // cotización-pedido a la derecha.
   const [pedidoAbierto, setPedidoAbierto] = useState(false);
   const cart = useCart();
 
   const options = useMemo(
-    () => FILTERS.map((f) => ({ ...f, options: [...new Set(productos.map((p) => p[f.key]))] })),
+    () => FILTERS.map((f) => ({ ...f, options: [...new Set(CATALOGO.map((p) => p[f.key]))] })),
     [],
   );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return productos.filter((p) => {
-      const matchesQuery = !q || `${p.nombre} ${p.marca} ${p.medida}`.toLowerCase().includes(q);
-      const matchesFilters = Object.entries(active).every(([k, v]) => !v || p[k] === v);
+    return CATALOGO.filter((p) => {
+      const matchesQuery = !q || `${p.nombre} ${p.marca} ${p.medidas}`.toLowerCase().includes(q);
+      const matchesFilters = Object.entries(active).every(([k, v]) => !v?.length || v.includes(p[k]));
       return matchesQuery && matchesFilters;
     });
   }, [query, active]);
@@ -51,9 +62,7 @@ export default function CatalogoPage() {
   return (
     <div
       className={
-        pedidoAbierto
-          ? 'flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6'
-          : ''
+        pedidoAbierto ? 'flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6' : ''
       }
     >
       {/* Columna izquierda: el catálogo */}
@@ -64,7 +73,7 @@ export default function CatalogoPage() {
             aria-expanded={pedidoAbierto}
             className="inline-flex items-center gap-2 rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-bold text-slate-900 shadow-sm shadow-amber-400/30 transition-colors hover:bg-amber-300"
           >
-            <Plus size={16} /> Crear pedido-cotización
+            <Plus size={16} /> Crear cotización-pedido
             {cart.count > 0 && (
               <span className="ml-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-900 px-1.5 text-[11px] font-bold text-amber-400">
                 {cart.count}
@@ -75,7 +84,7 @@ export default function CatalogoPage() {
 
         <h1 className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">Catálogo de Llantas</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          {filtered.length} de {productos.length} productos
+          {filtered.length} de {CATALOGO.length} productos
         </p>
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -85,28 +94,19 @@ export default function CatalogoPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar por nombre, marca o medida..."
-              className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/30 dark:border-white/10 dark:bg-brand-navy-800 dark:text-slate-200"
+              className={`${INPUT} ${BORDER_OK} pl-9`}
             />
           </div>
           {options.map((f) => (
-            <div key={f.key} className="relative min-w-[140px] flex-1 sm:flex-none">
-              <select
-                value={active[f.key] ?? ''}
-                onChange={(e) => setActive((a) => ({ ...a, [f.key]: e.target.value }))}
-                className="w-full appearance-none rounded-lg border border-slate-200 bg-white py-2.5 pl-3 pr-9 text-sm text-slate-600 focus:border-amber-400 focus:outline-none dark:border-white/10 dark:bg-brand-navy-800 dark:text-slate-300"
-              >
-                <option value="">{f.label}: Todos</option>
-                {f.options.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                size={15}
-                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-              />
-            </div>
+            <Dropdown
+              key={f.key}
+              label={f.label}
+              multiple
+              value={active[f.key] ?? []}
+              options={f.options}
+              onChange={(valores) => setActive((a) => ({ ...a, [f.key]: valores }))}
+              icon={<SlidersHorizontal size={13} className="shrink-0 opacity-70" />}
+            />
           ))}
         </div>
 
@@ -114,17 +114,35 @@ export default function CatalogoPage() {
           {filtered.map((p) => (
             <div
               key={p.id}
-              className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-brand-navy-800"
+              className="ml-tarjeta flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-brand-navy-800"
             >
               <button onClick={() => setSelected(p)} className="text-left">
-                <TireThumb brand={p.marca} badge={p.categoria} className="h-32 w-full" />
+                <TireThumb
+                  brand={p.marca}
+                  badge={p.categoria}
+                  badgeColor={COLOR_CATEGORIA[p.categoria]}
+                  className="h-32 w-full"
+                />
               </button>
               <div className="flex flex-1 flex-col p-4">
                 <p className="text-xs font-bold tracking-wide text-amber-500 dark:text-amber-400">
                   {p.marca.toUpperCase()}
                 </p>
                 <p className="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">{p.nombre}</p>
-                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{p.medida}</p>
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{p.medidas}</p>
+
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span className="text-base font-bold text-slate-900 dark:text-white">
+                    {pesos(p.precioVenta)}
+                  </span>
+                  <span
+                    className={`text-[11px] font-semibold ${
+                      p.stock > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'
+                    }`}
+                  >
+                    {p.stock > 0 ? `${p.stock} disponibles` : 'Agotado'}
+                  </span>
+                </div>
 
                 <div className="mt-3 flex gap-2">
                   <button
@@ -162,9 +180,10 @@ export default function CatalogoPage() {
         )}
       </div>
 
-      {/* Columna derecha: el pedido-cotización */}
+      {/* Columna derecha: la cotización-pedido. Se desplaza por su cuenta,
+          así que el catálogo no se mueve mientras el cursor está encima. */}
       {pedidoAbierto && (
-        <aside className="order-first mb-8 lg:sticky lg:top-24 lg:order-none lg:mb-0 lg:self-start">
+        <aside className="order-first mb-8 lg:sticky lg:top-24 lg:order-none lg:mb-0 lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
           <PedidoPanel onClose={() => setPedidoAbierto(false)} />
         </aside>
       )}
@@ -172,7 +191,7 @@ export default function CatalogoPage() {
       {selected && (
         <Modal
           title={selected.nombre}
-          subtitle={`${selected.marca} · ${selected.medida}`}
+          subtitle={`${selected.marca} · ${selected.medidas}`}
           icon={<ShoppingCart size={16} />}
           size="lg"
           onClose={() => setSelected(null)}
@@ -184,7 +203,7 @@ export default function CatalogoPage() {
               }}
               className="inline-flex items-center gap-2 rounded-lg bg-amber-400 px-4 py-2.5 text-sm font-bold text-slate-900 shadow-sm shadow-amber-400/30 hover:bg-amber-300"
             >
-              <ShoppingCart size={16} /> Agregar al pedido
+              <ShoppingCart size={16} /> Agregar a la cotización
             </button>
           )}
         >
@@ -195,25 +214,41 @@ export default function CatalogoPage() {
                 {selected.marca.toUpperCase()}
               </p>
               <p className="text-base font-bold text-slate-900 dark:text-white">{selected.nombre}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">{selected.medida}</p>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                Llanta {selected.categoria.toLowerCase()} diseñada para {selected.vehiculo.toLowerCase()}, con
-                excelente relación de durabilidad y agarre.
+              <p className="text-sm text-slate-500 dark:text-slate-400">{selected.medidas}</p>
+              <p className="mt-2 text-xl font-bold text-slate-900 dark:text-white">
+                {pesos(selected.precioVenta)}
               </p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{selected.descripcion}</p>
             </div>
           </div>
           <dl className="mt-4 space-y-2 border-t border-slate-100 pt-4 text-sm dark:border-white/10">
             <div className="flex justify-between gap-3">
-              <dt className="text-slate-500 dark:text-slate-400">Tipo de vehículo</dt>
-              <dd className="font-medium text-slate-800 dark:text-slate-100">{selected.vehiculo}</dd>
+              <dt className="text-slate-500 dark:text-slate-400">Código</dt>
+              <dd className="font-medium text-slate-800 dark:text-slate-100">{selected.codigo}</dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-slate-500 dark:text-slate-400">Categorías</dt>
-              <dd className="font-medium text-slate-800 dark:text-slate-100">{selected.categoria}</dd>
+              <dt className="text-slate-500 dark:text-slate-400">Tipo de vehículo</dt>
+              <dd className="font-medium text-slate-800 dark:text-slate-100">{selected.tipoVehiculo}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-slate-500 dark:text-slate-400">Categoría</dt>
+              <dd className="flex items-center gap-1.5 font-medium text-slate-800 dark:text-slate-100">
+                <span
+                  className="h-2.5 w-2.5 rounded-full ring-1 ring-black/10 dark:ring-white/20"
+                  style={{ backgroundColor: COLOR_CATEGORIA[selected.categoria] ?? '#94A3B8' }}
+                />
+                {selected.categoria}
+              </dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-slate-500 dark:text-slate-400">Disponibilidad</dt>
-              <dd className="font-medium text-emerald-600 dark:text-emerald-400">{selected.estado}</dd>
+              <dd
+                className={`font-medium ${
+                  selected.stock > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'
+                }`}
+              >
+                {selected.stock > 0 ? `${selected.stock} unidades` : 'Agotado'}
+              </dd>
             </div>
           </dl>
         </Modal>

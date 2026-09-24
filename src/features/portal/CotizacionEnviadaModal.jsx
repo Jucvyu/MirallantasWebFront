@@ -82,6 +82,10 @@ export default function CotizacionEnviadaModal({ credito = null, onClose }) {
                 <dd className="font-bold text-slate-800 dark:text-slate-100">{credito.plazo} días</dd>
               </div>
               <div className="flex justify-between gap-3">
+                <dt className="text-slate-500 dark:text-slate-400">Cuota inicial abonada</dt>
+                <dd className="font-bold text-emerald-600 dark:text-emerald-400">{credito.inicial}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
                 <dt className="text-slate-500 dark:text-slate-400">Cuota aproximada</dt>
                 <dd className="font-bold text-slate-800 dark:text-slate-100">{credito.cuota}</dd>
               </div>

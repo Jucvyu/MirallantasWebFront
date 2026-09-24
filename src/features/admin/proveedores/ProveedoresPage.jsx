@@ -2,44 +2,42 @@ import PageHeader from '../../../components/base/PageHeader';
 import DataTable from '../../../components/base/DataTable';
 import { estadosActivo, proveedores, tiposDocumento } from '../../../data/mockData';
 
+// Tabla `proveedor`: tipo_documento, numero_documento, nombre o razón
+// social, contacto, telefono, correo, direccion, estado.
 const columns = [
   { key: 'id', label: 'ID' },
-  { key: 'nombre', label: 'Nombre / Razón Social' },
-  { key: 'tipoDoc', label: 'Tipo Doc.' },
-  { key: 'numDoc', label: 'Número Doc.' },
-  { key: 'correo', label: 'Correo' },
+  { key: 'nombreRazonSocial', label: 'Nombre o razón social' },
+  { key: 'numeroDocumento', label: 'Documento' },
+  { key: 'contacto', label: 'Contacto' },
   { key: 'telefono', label: 'Teléfono' },
-  { key: 'direccion', label: 'Dirección' },
   { key: 'estado', label: 'Estado' },
 ];
 
-// Tabla `proveedor`: tipo_documento, numero_documento, nombre, direccion,
-// email, telefono.
 const formSections = [
   {
     title: 'Identificación',
     fields: [
-      {
-        key: 'nombre',
-        label: 'Nombre / Razón social',
-        required: true,
-        span: 2,
-        placeholder: 'Michelin Colombia SAS',
-      },
-      { key: 'tipoDoc', label: 'Tipo de documento', type: 'select', required: true, options: tiposDocumento },
-      { key: 'numDoc', label: 'Número de documento', required: true, placeholder: '860.345.678-9' },
+      { key: 'nombreRazonSocial', label: 'Nombre o razón social', required: true, span: 2 },
+      { key: 'tipoDocumento', label: 'Tipo de documento', type: 'select', required: true, options: tiposDocumento },
+      { key: 'numeroDocumento', label: 'Número de documento', type: 'number', required: true },
     ],
   },
   {
     title: 'Contacto',
     fields: [
-      { key: 'correo', label: 'Correo electrónico', type: 'email', placeholder: 'ventas@proveedor.co' },
-      { key: 'telefono', label: 'Teléfono', type: 'tel', placeholder: '6017891234' },
-      { key: 'direccion', label: 'Dirección', span: 2, placeholder: 'Cra 7 #71-52, Bogotá' },
-      { key: 'estado', label: 'Estado', type: 'select', options: estadosActivo },
+      { key: 'contacto', label: 'Persona de contacto' },
+      { key: 'telefono', label: 'Teléfono', type: 'tel', required: true },
+      { key: 'correo', label: 'Correo electrónico', type: 'email', required: true },
+      { key: 'direccion', label: 'Dirección', span: 2 },
+      { key: 'estado', label: 'Estado', type: 'select', options: estadosActivo, only: ['edit', 'view'] },
     ],
   },
 ];
+
+/** Los proveedores nuevos entran activos. */
+function normalize(values) {
+  return { estado: 'Activo', ...values };
+}
 
 export default function ProveedoresPage() {
   return (
@@ -49,12 +47,18 @@ export default function ProveedoresPage() {
         title="Proveedores"
         columns={columns}
         data={proveedores}
+        newLabel="Nuevo proveedor"
         formSections={formSections}
         entityName="proveedor"
+        titleKey="nombreRazonSocial"
+        normalize={normalize}
         statusKey="estado"
         statusOptions={estadosActivo}
         statusVariant="switch"
-        filters={[{ key: 'estado', label: 'Estado', options: estadosActivo }]}
+        filters={[
+          { key: 'nombreRazonSocial', label: 'Nombre o razón social' },
+          { key: 'estado', label: 'Estado', options: estadosActivo },
+        ]}
       />
     </div>
   );

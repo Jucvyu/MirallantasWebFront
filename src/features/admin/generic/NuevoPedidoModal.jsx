@@ -4,38 +4,48 @@ import Modal from '../../../components/base/Modal';
 import FormModal from '../../../components/base/FormModal';
 import Badge from '../../../components/base/Badge';
 import {
+  BORDER_ERR,
+  BORDER_OK,
+  INPUT as FIELD,
+  LABEL,
+  SECTION,
+  formatoMiles,
+  soloDigitos,
+} from '../../../components/base/formStyles';
+import {
   clientes,
-  estadosCotizacion,
+  CUOTA_INICIAL_CREDITO,
+  INTERES_POR_PLAZO,
   metodosPago,
+  PLAZOS_CREDITO,
   productos,
   proveedores,
+  servicios,
+  SERVICIO_POR_DEFECTO,
 } from '../../../data/mockData';
 import { servicioInitialValues, servicioSectionsAdmin } from '../../shared/servicioSections';
 
-const SECTION = 'text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500';
-const LABEL = 'mb-1.5 block text-[13px] font-semibold text-slate-700 dark:text-slate-200';
-const FIELD =
-  'w-full rounded-lg border bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none ' +
-  'focus:ring-2 focus:ring-amber-400/40 dark:bg-brand-navy-900 dark:text-slate-100';
-const BORDER_OK = 'border-slate-200 focus:border-amber-400 dark:border-white/10';
-const BORDER_ERR = 'border-red-400 dark:border-red-500/60';
+const pesos = (n) => `$ ${Math.round(n).toLocaleString('es-CO')}`;
 
 let lineaSeq = 0;
 
 /**
- * "Nuevo pedido-cotización" del administrador.
+ * "Nueva cotización-pedido" del administrador.
  *
- * A diferencia del formulario genérico, aquí el admin arma el detalle:
- * elige productos de una tabla con todo el catálogo del sistema (con
- * cantidad y opción de quitarlos) y puede agregar líneas de servicio con
- * el mismo formulario que usa el cliente en su portal.
+ * El asesor arma el detalle: elige productos del catálogo —con su precio de
+ * venta— y agrega líneas de servicio con el mismo formulario que usa el
+ * cliente. Si el pago se pacta a crédito, el sistema calcula el interés
+ * según el plazo y la cuota inicial del 50% que exige la empresa.
  */
 export default function NuevoPedidoModal({ onSubmit, onClose }) {
   const [cliente, setCliente] = useState('');
-  const [proveedor, setProveedor] = useState('');
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
-  const [metodoPago, setMetodoPago] = useState('');
-  const [estado, setEstado] = useState('Pendiente');
+  const [metodoPago, setMetodoPago] = useState('Contado');
+  const [plazo, setPlazo] = useState(30);
+  const [direccion, setDireccion] = useState('');
+  const [proveedor, setProveedor] = useState('');
+  // Cuota inicial escrita a mano; vacía significa "el 50% de rigor"
+  const [inicialManual, setInicialManual] = useState('');
 
   const [lineas, setLineas] = useState([]);
   const [query, setQuery] = useState('');
@@ -44,16 +54,37 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
 
   const catalogo = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return productos;
-    return productos.filter((p) => `${p.nombre} ${p.marca} ${p.medida}`.toLowerCase().includes(q));
+    // Un producto inactivo ya no se ofrece en cotizaciones nuevas
+    const activos = productos.filter((p) => p.estado === 'Activo');
+    if (!q) return activos;
+    return activos.filter((p) => `${p.codigo} ${p.nombre} ${p.marca} ${p.medidas}`.toLowerCase().includes(q));
   }, [query]);
+
+  // ---- Totales: subtotal de las líneas, interés y cuota inicial --------
+  const subtotal = lineas.reduce((suma, l) => suma + l.cantidad * l.unitario, 0);
+  const esCredito = metodoPago === 'Crédito';
+  const interes = esCredito ? subtotal * (INTERES_POR_PLAZO[plazo] ?? 0) : 0;
+  const total = subtotal + interes;
+  const inicialMinima = esCredito ? Math.round(total * CUOTA_INICIAL_CREDITO) : 0;
+  const inicialEscrita = Number(String(inicialManual).replace(/\D/g, '')) || 0;
+  const cuotaInicial = inicialManual === '' ? inicialMinima : inicialEscrita;
+  // La empresa no acepta una primera cuota por debajo de la mitad del total
+  const inicialInsuficiente = esCredito && total > 0 && cuotaInicial < inicialMinima;
+
+  /** Al elegir el cliente se trae su dirección para el despacho. */
+  const elegirCliente = (nombre) => {
+    setCliente(nombre);
+    const ficha = clientes.find((c) => c.nombreCompleto === nombre);
+    if (ficha && !direccion) setDireccion(ficha.direccion ?? '');
+    setErrors((e) => ({ ...e, cliente: undefined }));
+  };
 
   const agregarProducto = (p) => {
     setErrors((e) => ({ ...e, lineas: undefined }));
     setLineas((prev) => {
-      const found = prev.find((l) => l.tipo === 'producto' && l.productoId === p.id);
-      if (found) {
-        return prev.map((l) => (l.id === found.id ? { ...l, cantidad: l.cantidad + 1 } : l));
+      const existente = prev.find((l) => l.tipo === 'producto' && l.productoId === p.id);
+      if (existente) {
+        return prev.map((l) => (l.id === existente.id ? { ...l, cantidad: l.cantidad + 1 } : l));
       }
       lineaSeq += 1;
       return [
@@ -63,7 +94,9 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
           tipo: 'producto',
           productoId: p.id,
           nombre: p.nombre,
-          detalle: `${p.marca} · ${p.medida}`,
+          medida: p.medidas,
+          detalle: `${p.marca} · ${p.medidas}`,
+          unitario: p.precioVenta,
           cantidad: 1,
         },
       ];
@@ -73,15 +106,19 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
   const agregarServicio = (values) => {
     lineaSeq += 1;
     setErrors((e) => ({ ...e, lineas: undefined }));
+    const nombre = values.servicio || SERVICIO_POR_DEFECTO;
+    const ficha = servicios.find((s) => s.nombre === nombre);
     setLineas((prev) => [
       ...prev,
       {
         id: `L-${lineaSeq}`,
         tipo: 'servicio',
-        nombre: values.servicio,
+        nombre,
+        medida: values.medidas ?? '',
         detalle: values.descripcion,
         estadoEvidencia: values.estadoEvidencia || 'Pendiente de revisión',
         foto: values.foto,
+        unitario: ficha?.precio ?? 0,
         cantidad: Number(values.cantidad) || 1,
       },
     ]);
@@ -97,8 +134,11 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
   const guardar = (close) => {
     const next = {};
     if (!cliente) next.cliente = 'Selecciona el cliente';
-    if (!proveedor) next.proveedor = 'Selecciona el proveedor';
-    if (lineas.length === 0) next.lineas = 'Agrega al menos un producto o servicio al pedido';
+    if (!direccion.trim()) next.direccion = 'Indica la dirección de despacho';
+    if (lineas.length === 0) next.lineas = 'Agrega al menos un producto o servicio a la cotización';
+    if (inicialInsuficiente) {
+      next.inicial = `La primera cuota debe ser de al menos ${pesos(inicialMinima)} (50% del total).`;
+    }
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
@@ -107,12 +147,22 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
       proveedor,
       fecha,
       metodoPago,
-      estado,
-      // La cotización nace en cero: el valor se fija y confirma después
-      // desde el propio listado.
-      total: '$ 0',
-      confirmado: false,
-      lineas,
+      direccionEntrega: direccion,
+      plazoDias: esCredito ? plazo : 0,
+      total: pesos(total),
+      interes: pesos(interes),
+      cuotaInicial: pesos(cuotaInicial),
+      confirmado: true,
+      estado: 'Pendiente',
+      estadoEntrega: 'Pendiente',
+      detalle: lineas.map((l) => ({
+        tipo: l.tipo,
+        nombre: l.nombre,
+        medida: l.medida,
+        cantidad: l.cantidad,
+        unitario: pesos(l.unitario),
+        subtotal: pesos(l.unitario * l.cantidad),
+      })),
     });
     close();
   };
@@ -120,7 +170,7 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
   return (
     <>
       <Modal
-        title="Nuevo pedido-cotización"
+        title="Nueva cotización-pedido"
         subtitle="Arma el detalle con productos del catálogo y servicios de reencauche."
         icon={<FileText size={17} />}
         size="xl"
@@ -139,13 +189,13 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
               onClick={() => guardar(close)}
               className="inline-flex items-center gap-2 rounded-lg bg-amber-400 px-4 py-2.5 text-sm font-bold text-slate-900 shadow-sm shadow-amber-400/30 hover:bg-amber-300"
             >
-              <Check size={16} /> Guardar pedido
+              <Check size={16} /> Guardar cotización
             </button>
           </>
         )}
       >
         <div className="space-y-6">
-          {/* Cabecera de la cotización */}
+          {/* ---- Cabecera de la cotización ---- */}
           <section>
             <div className="mb-3 flex items-center gap-3">
               <span className={SECTION}>Datos de la cotización</span>
@@ -161,15 +211,17 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
                   <select
                     id="np-cliente"
                     value={cliente}
-                    onChange={(e) => setCliente(e.target.value)}
-                    className={`${FIELD} ${errors.cliente ? BORDER_ERR : BORDER_OK} appearance-none pr-9`}
+                    onChange={(e) => elegirCliente(e.target.value)}
+                    className={`${FIELD} ${errors.cliente ? BORDER_ERR : BORDER_OK} cursor-pointer appearance-none pr-10`}
                   >
                     <option value="">Seleccionar...</option>
-                    {clientes.map((c) => (
-                      <option key={c.id} value={c.nombre}>
-                        {c.nombre}
-                      </option>
-                    ))}
+                    {clientes
+                      .filter((c) => c.estado === 'Activo')
+                      .map((c) => (
+                        <option key={c.id} value={c.nombreCompleto}>
+                          {c.nombreCompleto}
+                        </option>
+                      ))}
                   </select>
                   <ChevronDown
                     size={16}
@@ -181,28 +233,30 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
 
               <div>
                 <label htmlFor="np-proveedor" className={LABEL}>
-                  Proveedor <span className="text-red-500">*</span>
+                  Proveedor
                 </label>
                 <div className="relative">
                   <select
                     id="np-proveedor"
                     value={proveedor}
                     onChange={(e) => setProveedor(e.target.value)}
-                    className={`${FIELD} ${errors.proveedor ? BORDER_ERR : BORDER_OK} appearance-none pr-9`}
+                    className={`${FIELD} ${BORDER_OK} cursor-pointer appearance-none pr-10`}
                   >
                     <option value="">Seleccionar...</option>
-                    {proveedores.map((p) => (
-                      <option key={p.id} value={p.nombre}>
-                        {p.nombre}
-                      </option>
-                    ))}
+                    {/* Un proveedor inactivo ya no surte cotizaciones nuevas */}
+                    {proveedores
+                      .filter((p) => p.estado === 'Activo')
+                      .map((p) => (
+                        <option key={p.id} value={p.nombreRazonSocial}>
+                          {p.nombreRazonSocial}
+                        </option>
+                      ))}
                   </select>
                   <ChevronDown
                     size={16}
                     className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
                   />
                 </div>
-                {errors.proveedor && <p className="mt-1 text-xs font-medium text-red-500">{errors.proveedor}</p>}
               </div>
 
               <div>
@@ -218,62 +272,109 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="np-pago" className={LABEL}>
-                    Método de pago
-                  </label>
-                  <div className="relative">
-                    <select
-                      id="np-pago"
-                      value={metodoPago}
-                      onChange={(e) => setMetodoPago(e.target.value)}
-                      className={`${FIELD} ${BORDER_OK} appearance-none pr-9`}
-                    >
-                      <option value="">Seleccionar...</option>
-                      {metodosPago.map((m) => (
-                        <option key={m} value={m}>
-                          {m}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      size={16}
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="np-estado" className={LABEL}>
-                    Estado
-                  </label>
-                  <div className="relative">
-                    <select
-                      id="np-estado"
-                      value={estado}
-                      onChange={(e) => setEstado(e.target.value)}
-                      className={`${FIELD} ${BORDER_OK} appearance-none pr-9`}
-                    >
-                      {estadosCotizacion.map((e) => (
-                        <option key={e} value={e}>
-                          {e}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      size={16}
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                    />
-                  </div>
+              <div>
+                <label htmlFor="np-pago" className={LABEL}>
+                  Método de pago
+                </label>
+                <div className="relative">
+                  <select
+                    id="np-pago"
+                    value={metodoPago}
+                    onChange={(e) => setMetodoPago(e.target.value)}
+                    className={`${FIELD} ${BORDER_OK} cursor-pointer appearance-none pr-10`}
+                  >
+                    {metodosPago.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={16}
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
                 </div>
               </div>
+
+              <div>
+                <label htmlFor="np-direccion" className={LABEL}>
+                  Dirección de despacho <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="np-direccion"
+                  value={direccion}
+                  onChange={(e) => {
+                    setDireccion(e.target.value);
+                    setErrors((x) => ({ ...x, direccion: undefined }));
+                  }}
+                  placeholder="Calle 50 #45-12, Medellín"
+                  className={`${FIELD} ${errors.direccion ? BORDER_ERR : BORDER_OK}`}
+                />
+                {errors.direccion && <p className="mt-1 text-xs font-medium text-red-500">{errors.direccion}</p>}
+              </div>
             </div>
+
+            {/* Plazo: solo tiene sentido cuando se financia */}
+            {esCredito && (
+              <div className="mt-4">
+                <span className={LABEL}>Plazo del crédito</span>
+                <div className="flex gap-2">
+                  {PLAZOS_CREDITO.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPlazo(p)}
+                      aria-pressed={plazo === p}
+                      className={`flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors ${
+                        plazo === p
+                          ? 'border-amber-400 bg-amber-400/10 text-amber-600 dark:text-amber-400'
+                          : 'border-slate-200 text-slate-500 hover:border-slate-300 dark:border-white/10 dark:text-slate-400'
+                      }`}
+                    >
+                      {p} días · {(INTERES_POR_PLAZO[p] * 100).toFixed(0)}%
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-4 sm:w-1/2">
+                  <label htmlFor="np-inicial" className={LABEL}>
+                    Primera cuota (COP)
+                  </label>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+                      $
+                    </span>
+                    <input
+                      id="np-inicial"
+                      inputMode="numeric"
+                      value={inicialManual === '' ? formatoMiles(String(inicialMinima)) : inicialManual}
+                      onChange={(e) => {
+                        setInicialManual(formatoMiles(e.target.value));
+                        setErrors((x) => ({ ...x, inicial: undefined }));
+                      }}
+                      className={`${FIELD} ${
+                        inicialInsuficiente || errors.inicial ? BORDER_ERR : BORDER_OK
+                      } pl-8`}
+                    />
+                  </div>
+                  {inicialInsuficiente || errors.inicial ? (
+                    <p className="mt-1 text-xs font-medium text-red-500">
+                      La primera cuota debe ser de al menos {pesos(inicialMinima)} (50% del total).
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                      Mínimo {pesos(inicialMinima)}, el 50% que exige la empresa.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </section>
 
-          {/* Catálogo completo del sistema */}
+          {/* ---- Catálogo de productos ---- */}
           <section>
             <div className="mb-3 flex flex-wrap items-center gap-3">
-              <span className={SECTION}>Productos del sistema</span>
+              <span className={SECTION}>Productos del catálogo</span>
               <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
               <div className="relative w-full sm:w-56">
                 <Search
@@ -289,12 +390,13 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
               </div>
             </div>
 
-            <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-200 dark:border-white/10">
+            <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-white/10">
               <table className="w-full text-left text-sm">
                 <thead className="sticky top-0 bg-slate-50 dark:bg-brand-navy-900">
                   <tr className="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                     <th className="px-4 py-2.5">Producto</th>
-                    <th className="px-4 py-2.5">Medida</th>
+                    <th className="px-4 py-2.5">Stock</th>
+                    <th className="px-4 py-2.5 text-right">Precio venta</th>
                     <th className="px-4 py-2.5" />
                   </tr>
                 </thead>
@@ -306,9 +408,14 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
                     >
                       <td className="px-4 py-2.5">
                         <p className="font-semibold text-slate-800 dark:text-slate-100">{p.nombre}</p>
-                        <p className="text-xs text-slate-400 dark:text-slate-500">{p.marca}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">
+                          {p.codigo} · {p.medidas}
+                        </p>
                       </td>
-                      <td className="whitespace-nowrap px-4 py-2.5">{p.medida}</td>
+                      <td className="px-4 py-2.5">
+                        <span className={p.stock === 0 ? 'font-semibold text-red-500' : ''}>{p.stock}</span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2.5 text-right">{pesos(p.precioVenta)}</td>
                       <td className="px-4 py-2.5 text-right">
                         <button
                           type="button"
@@ -322,7 +429,7 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
                   ))}
                   {catalogo.length === 0 && (
                     <tr>
-                      <td colSpan={3} className="px-4 py-8 text-center text-sm text-slate-400">
+                      <td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-400">
                         Ningún producto coincide con la búsqueda.
                       </td>
                     </tr>
@@ -332,10 +439,10 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
             </div>
           </section>
 
-          {/* Detalle del pedido */}
+          {/* ---- Detalle de la cotización ---- */}
           <section>
             <div className="mb-3 flex flex-wrap items-center gap-3">
-              <span className={SECTION}>Detalle del pedido</span>
+              <span className={SECTION}>Detalle de la cotización</span>
               <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
               <button
                 type="button"
@@ -353,7 +460,7 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
                 }`}
               >
                 <p className="text-sm font-medium text-slate-400 dark:text-slate-500">
-                  El pedido todavía no tiene líneas
+                  La cotización todavía no tiene líneas
                 </p>
                 <p className="mt-1 text-xs text-slate-400 dark:text-slate-600">
                   Agrega productos de la tabla de arriba o registra un servicio.
@@ -366,6 +473,7 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
                     <tr className="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                       <th className="px-4 py-2.5">Línea</th>
                       <th className="px-4 py-2.5 text-center">Cantidad</th>
+                      <th className="px-4 py-2.5 text-right">Subtotal</th>
                       <th className="px-4 py-2.5" />
                     </tr>
                   </thead>
@@ -396,13 +504,15 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
                         </td>
                         <td className="px-4 py-3 text-center">
                           <input
-                            type="number"
-                            min="1"
+                            inputMode="numeric"
                             value={l.cantidad}
-                            onChange={(e) => setCantidad(l.id, e.target.value)}
+                            onChange={(e) => setCantidad(l.id, soloDigitos(e.target.value))}
                             aria-label={`Cantidad de ${l.nombre}`}
-                            className="w-16 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-center text-sm text-slate-800 focus:border-amber-400 focus:outline-none dark:border-white/10 dark:bg-brand-navy-900 dark:text-slate-100"
+                            className={`${FIELD} ${BORDER_OK} w-16 px-2 py-1.5 text-center`}
                           />
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right font-semibold text-slate-800 dark:text-slate-100">
+                          {pesos(l.unitario * l.cantidad)}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <button
@@ -422,6 +532,30 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
             )}
 
             {errors.lineas && <p className="mt-2 text-xs font-medium text-red-500">{errors.lineas}</p>}
+
+            {/* ---- Resumen de valores ---- */}
+            <dl className="mt-3 space-y-1.5 rounded-xl border-2 border-amber-400 bg-amber-400/10 px-5 py-4 text-sm">
+              <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                <dt>Subtotal</dt>
+                <dd className="font-semibold">{pesos(subtotal)}</dd>
+              </div>
+              {esCredito && (
+                <>
+                  <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                    <dt>Interés ({(INTERES_POR_PLAZO[plazo] * 100).toFixed(0)}% a {plazo} días)</dt>
+                    <dd className="font-semibold">{pesos(interes)}</dd>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                    <dt>Primera cuota</dt>
+                    <dd className="font-semibold">{pesos(cuotaInicial)}</dd>
+                  </div>
+                </>
+              )}
+              <div className="flex items-center justify-between border-t border-amber-400/40 pt-2">
+                <dt className="font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">Total</dt>
+                <dd className="text-xl font-bold text-slate-900 dark:text-white">{pesos(total)}</dd>
+              </div>
+            </dl>
           </section>
         </div>
       </Modal>
@@ -433,7 +567,7 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
           subtitle="Reencauche: sube la foto de la carcasa para evaluar si es apta."
           sections={servicioSectionsAdmin}
           initialValues={servicioInitialValues}
-          submitLabel="Agregar al pedido"
+          submitLabel="Agregar a la cotización"
           onSubmit={agregarServicio}
           onClose={() => setServicioModal(false)}
         />

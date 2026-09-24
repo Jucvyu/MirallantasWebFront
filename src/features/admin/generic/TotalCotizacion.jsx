@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Check, Pencil } from 'lucide-react';
+import { BORDER_ERR, BORDER_OK, INPUT, formatoMiles } from '../../../components/base/formStyles';
 import { formatCOP, parseCOP, useCredito } from '../../../context/CreditoContext';
 
 /**
@@ -62,15 +63,14 @@ export default function TotalCotizacion({ row, update }) {
         </span>
         <input
           value={valor}
+          inputMode="numeric"
           onChange={(e) => {
-            setValor(e.target.value);
+            setValor(formatoMiles(e.target.value));
             setError('');
           }}
           placeholder="0"
           aria-label={`Valor total de ${row.id}`}
-          className={`w-28 rounded-lg border bg-slate-50 py-1.5 pl-5 pr-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400/40 dark:bg-brand-navy-900 dark:text-slate-100 ${
-            error ? 'border-red-400 dark:border-red-500/60' : 'border-slate-200 focus:border-amber-400 dark:border-white/10'
-          }`}
+          className={`${INPUT} ${error ? BORDER_ERR : BORDER_OK} w-28 py-1.5 pl-5 pr-2`}
         />
       </span>
 

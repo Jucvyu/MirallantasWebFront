@@ -1,23 +1,26 @@
-import { CalendarCheck, CalendarDays, Check, ShieldCheck, Wrench } from 'lucide-react';
+import { Check, ShieldCheck, Wrench } from 'lucide-react';
 import Badge from '../../components/base/Badge';
 import Modal from '../../components/base/Modal';
+import { estadosServicio } from '../../data/mockData';
 
-// Avance de la orden de reencauche. `paso` (1-3) dice cuántos van hechos.
-const PASOS = ['Recepción', 'En proceso', 'Finalizado'];
+// Avance de la solicitud de servicio. El estado "Cancelado" se sale del
+// flujo normal, así que se muestra aparte.
+const PASOS = estadosServicio.filter((e) => e !== 'Cancelado');
 
 /**
- * Estado de la orden de reencauche de una línea de servicio.
+ * Estado de la solicitud de reencauche de una línea de servicio.
  *
- * Reemplaza a la antigua vista "Mis Reencauches": ahora el avance se
- * consulta desde el detalle del servicio dentro de su cotización.
+ * Se consulta desde el detalle del servicio dentro de su cotización: el
+ * cliente ve en qué punto va la carcasa y qué reencauchadora la tiene.
  */
-export default function ReencaucheModal({ linea, onClose }) {
-  const ficha = linea.fichaServicio;
+export default function ReencaucheModal({ solicitud, onClose }) {
+  const cancelada = solicitud.estado === 'Cancelado';
+  const pasoActual = PASOS.indexOf(solicitud.estado);
 
   return (
     <Modal
       title="Estado del reencauche"
-      subtitle={`${ficha.orden} · ${linea.nombre}`}
+      subtitle={`${solicitud.id} · ${solicitud.servicio}`}
       icon={<Wrench size={17} />}
       size="md"
       onClose={onClose}
@@ -32,79 +35,90 @@ export default function ReencaucheModal({ linea, onClose }) {
       )}
     >
       <div className="space-y-6">
-        {/* ---- Cabecera: taller y estado de la orden ---- */}
-        <div className="flex items-center justify-between gap-3">
+        {/* ---- Cabecera: reencauchadora y estado ---- */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-bold text-slate-900 dark:text-white">{ficha.taller}</p>
+            <p className="text-sm font-bold text-slate-900 dark:text-white">
+              {solicitud.tercero || 'Reencauchadora sin asignar'}
+            </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              {ficha.modalidad} · {linea.cantidad} {linea.cantidad === 1 ? 'llanta' : 'llantas'}
+              {solicitud.servicio} · {solicitud.cantidad}{' '}
+              {solicitud.cantidad === 1 ? 'llanta' : 'llantas'}
             </p>
           </div>
-          <Badge>{ficha.estado}</Badge>
+          <Badge>{solicitud.estado}</Badge>
         </div>
 
-        {/* ---- Línea de avance ---- */}
-        <div className="flex items-center px-2">
-          {PASOS.map((paso, i) => {
-            const hecho = i + 1 <= ficha.paso;
-            return (
-              <div key={paso} className="flex flex-1 items-center last:flex-none">
-                <div className="flex flex-col items-center gap-2">
+        {/* ---- Avance del servicio ---- */}
+        {cancelada ? (
+          <p className="rounded-xl border border-red-400/40 bg-red-500/5 px-4 py-3 text-xs font-medium text-red-600 dark:text-red-400">
+            El servicio fue cancelado: la reencauchadora o el cliente no continuaron con el proceso.
+          </p>
+        ) : (
+          <ol className="space-y-3">
+            {PASOS.map((paso, i) => {
+              const hecho = i <= pasoActual;
+              return (
+                <li key={paso} className="flex items-center gap-3">
                   <span
-                    className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                       hecho
-                        ? 'bg-amber-400 text-slate-900'
-                        : 'bg-slate-200 text-slate-500 dark:bg-white/10 dark:text-slate-500'
+                        ? 'bg-emerald-500 text-white'
+                        : 'border border-slate-300 text-slate-400 dark:border-white/20'
                     }`}
                   >
-                    {hecho ? <Check size={15} /> : i + 1}
+                    {hecho ? <Check size={13} strokeWidth={3} /> : i + 1}
                   </span>
                   <span
-                    className={`text-[11px] font-bold tracking-wide ${
-                      hecho ? 'text-amber-500 dark:text-amber-400' : 'text-slate-400 dark:text-slate-600'
+                    className={`text-sm font-semibold ${
+                      hecho ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500'
                     }`}
                   >
-                    {paso.toUpperCase()}
+                    {paso}
                   </span>
-                </div>
-                {i < PASOS.length - 1 && (
-                  <span
-                    className={`mx-3 h-0.5 flex-1 ${
-                      i + 1 < ficha.paso ? 'bg-amber-400' : 'bg-slate-200 dark:bg-white/10'
-                    }`}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
 
-        {/* ---- Fechas y garantía ---- */}
-        <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 dark:border-white/5 sm:grid-cols-3">
-          {[
-            ['RECEPCIÓN', ficha.recepcion, CalendarDays],
-            ['ENTREGA EST.', ficha.entrega, CalendarCheck],
-            ['GARANTÍA', `${ficha.garantiaDias} días`, ShieldCheck],
-          ].map(([etiqueta, valor, Icono]) => (
-            <div key={etiqueta} className="rounded-lg bg-slate-50 p-3 dark:bg-white/5">
-              <p className="flex items-center gap-1.5 text-[10px] font-bold tracking-wide text-slate-400 dark:text-slate-500">
-                <Icono size={11} /> {etiqueta}
-              </p>
-              <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">{valor || '—'}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* ---- Evidencia de la carcasa ---- */}
-        <div className="border-t border-slate-100 pt-4 dark:border-white/5">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-              Evidencia de la carcasa
-            </p>
-            <Badge>{ficha.estadoEvidencia}</Badge>
+        {/* ---- Ficha técnica ---- */}
+        <dl className="space-y-2.5 border-t border-slate-200 pt-5 text-sm dark:border-white/10">
+          <div className="flex justify-between gap-3">
+            <dt className="text-slate-500 dark:text-slate-400">Medidas</dt>
+            <dd className="font-semibold text-slate-800 dark:text-slate-100">{solicitud.medidas || '—'}</dd>
           </div>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{ficha.observaciones}</p>
-        </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-slate-500 dark:text-slate-400">Fecha de recepción</dt>
+            <dd className="font-semibold text-slate-800 dark:text-slate-100">{solicitud.fecha}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-slate-500 dark:text-slate-400">Tiempo estimado</dt>
+            <dd className="font-semibold text-slate-800 dark:text-slate-100">
+              {solicitud.tiempoEstimado || 'Por definir'}
+            </dd>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <dt className="text-slate-500 dark:text-slate-400">Estado de la carcasa</dt>
+            <dd>
+              <Badge>{solicitud.estadoEvidencia}</Badge>
+            </dd>
+          </div>
+        </dl>
+
+        {/* ---- Garantía ---- */}
+        <p
+          className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-xs font-medium ${
+            solicitud.garantia === 'Sí'
+              ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400'
+              : 'border-slate-200 text-slate-500 dark:border-white/10 dark:text-slate-400'
+          }`}
+        >
+          <ShieldCheck size={14} className="shrink-0" />
+          {solicitud.garantia === 'Sí'
+            ? 'El servicio incluye garantía de la reencauchadora.'
+            : 'Este servicio no incluye garantía.'}
+        </p>
       </div>
     </Modal>
   );

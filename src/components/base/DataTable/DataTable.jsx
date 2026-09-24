@@ -1,12 +1,24 @@
 import { useMemo, useState } from 'react';
 import { Download, Eye, Pencil, Plus, RefreshCw, Search, SlidersHorizontal, Trash2 } from 'lucide-react';
 import Dropdown from '../Dropdown';
+import { BORDER_OK, INPUT } from '../formStyles';
 import FormModal from '../FormModal';
 import ConfirmDialog from '../ConfirmDialog';
 import StatusSelect from '../StatusSelect';
 import StatusSwitch from '../StatusSwitch';
 
 const PAGE_SIZE = 8;
+
+/**
+ * Artículo que le corresponde al nombre de la entidad, para que los
+ * títulos digan "Nueva venta" y no "Nuevo venta".
+ *
+ * Se deduce de la terminación —a, -ión, -dad, -tud y -umbre son femeninas—
+ * y se puede forzar con la prop `entityGender`.
+ */
+function esFemenino(nombre) {
+  return /(a|ión|dad|tud|umbre)$/i.test(String(nombre).trim());
+}
 
 /** Genera el siguiente ID siguiendo el patrón del último registro (U005 → U006). */
 function nextId(rows) {
@@ -45,6 +57,23 @@ function fallbackSections(columns) {
  * filters: [{ key, label, options? }] filtros de la barra superior
  * createModal: ({ onSubmit, onClose }) => nodo, para reemplazar el formulario
  *   de "Nuevo" por uno a medida
+ * rows / onRowsChange: modo controlado. Cuando el listado vive en un
+ *   contexto compartido (p. ej. las entregas), la tabla deja de guardar su
+ *   propia copia y delega los cambios hacia afuera
+ * rowActions: (row, { update }) => nodo, botones extra a la izquierda de
+ *   ver/editar; `update(patch)` modifica esa misma fila
+ * formValidate: (values) => ({ campo: 'mensaje' }) para las reglas del
+ *   formulario que miran varios campos a la vez
+ * statusFlow: { estado: [siguientes] } para limitar los cambios de estado
+ *   a las transiciones válidas
+ * exportable: muestra u oculta el botón de exportar
+ * canView / canEdit / canDelete: muestran u ocultan cada acción de la fila.
+ *   Sirven, por ejemplo, para que un módulo con su propio "ver detalle" no
+ *   repita el del formulario, o para que la cartera no se pueda editar
+ * entityGender: 'f' o 'm', para forzar el artículo de los títulos
+ *
+ * Los filtros admiten varias opciones a la vez: `activeFilters[k]` es un
+ * arreglo y la fila entra si coincide con cualquiera de las marcadas.
  */
 export default function DataTable({
   columns,
@@ -62,8 +91,28 @@ export default function DataTable({
   statusVariant = 'select',
   filters = [],
   createModal,
+  rows: rowsExternas,
+  onRowsChange,
+  rowActions,
+  statusFlow,
+  formValidate,
+  exportable = true,
+  canView = true,
+  canEdit = true,
+  canDelete = true,
+  entityGender,
 }) {
-  const [rows, setRows] = useState(data);
+  const femenino = entityGender ? entityGender === 'f' : esFemenino(entityName);
+  const nuevo = femenino ? 'Nueva' : 'Nuevo';
+  const [rowsInternas, setRowsInternas] = useState(data);
+
+  // Modo controlado: si llegan `rows`, mandan esas y los cambios salen por
+  // `onRowsChange`; si no, la tabla administra su propia copia.
+  const rows = rowsExternas ?? rowsInternas;
+  const setRows = (actualizar) =>
+    onRowsChange
+      ? onRowsChange(typeof actualizar === 'function' ? actualizar(rows) : actualizar)
+      : setRowsInternas(actualizar);
   const [query, setQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState({});
   const [page, setPage] = useState(1);
@@ -88,7 +137,11 @@ export default function DataTable({
     const q = query.trim().toLowerCase();
     return rows.filter((row) => {
       const matchesQuery = !q || Object.values(row).some((v) => String(v).toLowerCase().includes(q));
-      const matchesFilters = Object.entries(activeFilters).every(([k, v]) => !v || String(row[k]) === v);
+      // Cada filtro guarda un arreglo: sin marcas no filtra, y con varias
+      // basta con que la fila coincida con una de ellas.
+      const matchesFilters = Object.entries(activeFilters).every(
+        ([k, v]) => !v?.length || v.includes(String(row[k])),
+      );
       return matchesQuery && matchesFilters;
     });
   }, [rows, query, activeFilters]);
@@ -129,12 +182,14 @@ export default function DataTable({
         {title && <h1 className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">{title}</h1>}
         {toolbar && (
           <div className="flex items-center gap-2">
-            <button className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-brand-navy-800 dark:text-slate-200 dark:hover:bg-brand-navy-700">
-              <Download size={15} /> Exportar
-            </button>
+            {exportable && (
+              <button className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-brand-navy-800 dark:text-slate-200 dark:hover:bg-brand-navy-700">
+                <Download size={15} /> Exportar
+              </button>
+            )}
             <button
               onClick={() => setDialog({ mode: 'create' })}
-              className="inline-flex items-center gap-2 rounded-lg bg-amber-400 px-3.5 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300"
+              className="ml-pulsable inline-flex items-center gap-2 rounded-lg bg-amber-400 px-3.5 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300"
             >
               <Plus size={15} /> {newLabel}
             </button>
@@ -153,17 +208,18 @@ export default function DataTable({
                 setPage(1);
               }}
               placeholder="Buscar..."
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-amber-400 focus:outline-none dark:border-white/10 dark:bg-brand-navy-900 dark:text-slate-200"
+              className={`${INPUT} ${BORDER_OK} py-2 pl-9 pr-3`}
             />
           </div>
           {filterDefs.map((f) => (
             <Dropdown
               key={f.key}
               label={f.label}
-              value={activeFilters[f.key] ?? ''}
+              multiple
+              value={activeFilters[f.key] ?? []}
               options={f.options}
-              onChange={(valor) => {
-                setActiveFilters((a) => ({ ...a, [f.key]: valor }));
+              onChange={(valores) => {
+                setActiveFilters((a) => ({ ...a, [f.key]: valores }));
                 setPage(1);
               }}
               icon={<SlidersHorizontal size={13} className="shrink-0 opacity-70" />}
@@ -197,7 +253,7 @@ export default function DataTable({
               {pageRows.map((row) => (
                 <tr
                   key={row.id}
-                  className="border-t border-slate-100 text-slate-600 hover:bg-slate-50 dark:border-white/5 dark:text-slate-300 dark:hover:bg-white/[0.03]"
+                  className="border-t border-slate-100 text-slate-600 transition-colors hover:bg-slate-50 dark:border-white/5 dark:text-slate-300 dark:hover:bg-white/[0.03]"
                 >
                   {columns.map((col) => (
                     <td key={col.key} className="whitespace-nowrap px-5 py-3.5">
@@ -211,6 +267,7 @@ export default function DataTable({
                         <StatusSelect
                           value={row[col.key]}
                           options={statusOptions}
+                          flow={statusFlow}
                           onChange={(v) => handleStatusChange(row.id, v)}
                         />
                       ) : col.render ? (
@@ -222,29 +279,36 @@ export default function DataTable({
                   ))}
                   <td className="px-5 py-3.5">
                     <div className="flex items-center justify-end gap-1.5 text-slate-400">
-                      <button
-                        onClick={() => setDialog({ mode: 'view', row })}
-                        className="rounded p-1 hover:text-slate-700 dark:hover:text-slate-200"
-                        aria-label="Ver"
-                      >
-                        <Eye size={15} />
-                      </button>
+                      {rowActions?.(row, { update: (patch) => updateRow(row.id, patch) })}
+                      {canView && (
+                        <button
+                          onClick={() => setDialog({ mode: 'view', row })}
+                          className="rounded p-1 hover:text-slate-700 dark:hover:text-slate-200"
+                          aria-label="Ver"
+                        >
+                          <Eye size={15} />
+                        </button>
+                      )}
                       {!readOnly && (
                         <>
-                          <button
-                            onClick={() => setDialog({ mode: 'edit', row })}
-                            className="rounded p-1 hover:text-slate-700 dark:hover:text-slate-200"
-                            aria-label="Editar"
-                          >
-                            <Pencil size={15} />
-                          </button>
-                          <button
-                            onClick={() => setDialog({ mode: 'delete', row })}
-                            className="rounded p-1 hover:text-red-500"
-                            aria-label="Eliminar"
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => setDialog({ mode: 'edit', row })}
+                              className="rounded p-1 hover:text-slate-700 dark:hover:text-slate-200"
+                              aria-label="Editar"
+                            >
+                              <Pencil size={15} />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              onClick={() => setDialog({ mode: 'delete', row })}
+                              className="rounded p-1 hover:text-red-500"
+                              aria-label="Eliminar"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
                         </>
                       )}
                     </div>
@@ -295,9 +359,10 @@ export default function DataTable({
       {dialog?.mode === 'create' && !createModal && (
         <FormModal
           mode="create"
-          title={`Nuevo ${entityName}`}
+          title={`${nuevo} ${entityName}`}
           subtitle="Completa los campos marcados con * para registrar."
           sections={sections}
+          validate={formValidate}
           onSubmit={handleCreate}
           onClose={() => setDialog(null)}
         />
@@ -310,6 +375,7 @@ export default function DataTable({
           subtitle={dialog.row.id}
           sections={sections}
           initialValues={dialog.row}
+          validate={formValidate}
           onSubmit={handleEdit}
           onClose={() => setDialog(null)}
         />
@@ -318,7 +384,7 @@ export default function DataTable({
       {dialog?.mode === 'view' && (
         <FormModal
           mode="view"
-          title={`Detalle ${entityName}`}
+          title={`Detalle de ${femenino ? 'la' : 'el'} ${entityName}`}
           subtitle={dialog.row.id}
           sections={sections}
           initialValues={dialog.row}

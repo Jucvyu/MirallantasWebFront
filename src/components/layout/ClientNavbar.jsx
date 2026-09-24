@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { LogOut, Menu, Wallet, X } from 'lucide-react';
+import { LockKeyhole, LogOut, Menu, Wallet, X } from 'lucide-react';
 import { NavLink, Link } from 'react-router-dom';
 import { useCredito } from '../../context/CreditoContext';
 import Logo from '../base/Logo';
 import ThemeToggle from '../base/ThemeToggle';
+import PerfilMenu from './PerfilMenu';
 
 const LINKS = [
   { to: '/portal', label: 'Inicio', end: true },
   { to: '/portal/catalogo', label: 'Catálogo' },
-  { to: '/portal/pedidos', label: 'Mis Pedidos' },
+  { to: '/portal/pedidos', label: 'Mis Cotizaciones' },
+  { to: '/portal/cartera', label: 'Mi Cartera' },
 ];
 
 const linkClass = ({ isActive }) =>
@@ -18,17 +20,17 @@ const linkClass = ({ isActive }) =>
       : 'border border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'
   }`;
 
-export default function ClientNavbar({ profile, onOpenProfile }) {
+export default function ClientNavbar({ profile, onEditarPerfil }) {
   const [open, setOpen] = useState(false);
-  const { saldoUsableTexto } = useCredito();
+  const { saldoUsableTexto, tieneCredito } = useCredito();
 
-  // Iniciales para el avatar cuando el cliente no ha subido foto.
-  const iniciales = profile.nombre
-    .split(' ')
-    .slice(0, 2)
-    .map((palabra) => palabra[0])
-    .join('')
-    .toUpperCase();
+  // Detalle inicial que se ve en el desplegable del avatar
+  const campos = [
+    { label: 'Documento', value: `${profile.tipoDocumento ?? ''} ${profile.numeroDocumento ?? ''}`.trim() },
+    { label: 'Correo', value: profile.correo },
+    { label: 'Teléfono', value: profile.telefono },
+    { label: 'Dirección', value: profile.direccion },
+  ];
 
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-white/10 dark:bg-brand-navy-950/90">
@@ -46,31 +48,33 @@ export default function ClientNavbar({ profile, onOpenProfile }) {
 
         <div className="flex shrink-0 items-center gap-3">
           <ThemeToggle />
+          {/* Atajo de prueba para revisar la pantalla de acceso denegado */}
+          <Link
+            to="/acceso-denegado"
+            title="Probar la pantalla de acceso denegado"
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-400 transition-colors hover:border-red-400 hover:text-red-500 dark:border-white/10 dark:hover:border-red-400/60"
+          >
+            <LockKeyhole size={13} />
+          </Link>
+
           {/* Saldo de crédito disponible, siempre a la vista */}
           <span
-            title="Cupo de crédito disponible"
-            className="hidden items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 sm:inline-flex"
+            title={
+              tieneCredito
+                ? 'Tienes un crédito abierto: el saldo queda en negativo hasta saldarlo'
+                : 'Cupo de crédito disponible'
+            }
+            className={`hidden items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold sm:inline-flex ${
+              tieneCredito
+                ? 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400'
+                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+            }`}
           >
             <Wallet size={12} /> Saldo usable: {saldoUsableTexto}
           </span>
 
-          {/* La foto abre el modal de perfil, igual que en el admin */}
-          <button
-            onClick={onOpenProfile}
-            className="flex items-center gap-2 rounded-lg py-1 pl-1 pr-2 transition-colors hover:bg-slate-100 dark:hover:bg-white/10"
-            title="Ver y editar mi perfil"
-          >
-            {profile.foto ? (
-              <img src={profile.foto} alt="" className="h-7 w-7 rounded-full object-cover" />
-            ) : (
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-slate-900">
-                {iniciales}
-              </span>
-            )}
-            <span className="hidden text-sm font-medium text-slate-700 dark:text-slate-200 sm:inline">
-              {profile.nombre}
-            </span>
-          </button>
+          {/* La foto despliega el detalle del perfil, igual que en el admin */}
+          <PerfilMenu profile={profile} campos={campos} onEditar={onEditarPerfil} />
           <Link
             to="/"
             className="hidden items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 sm:flex"

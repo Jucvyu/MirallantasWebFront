@@ -1,5 +1,4 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { clientAbonos } from '../data/mockData';
 
 const AbonosContext = createContext(null);
 
@@ -14,17 +13,17 @@ export function formatCOP(value) {
 }
 
 /**
- * Abonos del cliente. Vive en el ClientLayout para que "Mis Abonos" y el
- * detalle de un crédito vean siempre la misma lista: un abono registrado
- * desde cualquiera de los dos aparece en el otro.
+ * Abonos del cliente. Vive en el ClientLayout para que la vista de cartera
+ * y el detalle de cada crédito vean siempre la misma lista: un abono
+ * registrado desde cualquiera de los dos aparece en el otro.
  */
-export function AbonosProvider({ children }) {
-  const [abonos, setAbonos] = useState(clientAbonos);
+export function AbonosProvider({ iniciales = [], children }) {
+  const [abonos, setAbonos] = useState(iniciales);
 
   const addAbono = useCallback((abono) => {
     setAbonos((prev) => {
       const num = prev.length + 1;
-      return [{ ...abono, id: `ABN-${String(100 + num).slice(-3)}` }, ...prev];
+      return [{ ...abono, id: `ABO-${String(100 + num).slice(-3)}` }, ...prev];
     });
   }, []);
 

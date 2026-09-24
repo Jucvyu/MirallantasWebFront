@@ -1,20 +1,23 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Briefcase,
+  Banknote,
   Building2,
   ChevronDown,
   ChevronLeft,
   CreditCard,
   FileText,
+  HandCoins,
   LayoutGrid,
   LogOut,
   Package,
   Receipt,
   Shield,
+  ShoppingBag,
   ShoppingCart,
+  Stamp,
   Tag,
-  Truck,
+  UserRound,
   Users,
   Wrench,
   X,
@@ -27,12 +30,10 @@ const DASHBOARD = { to: '/admin', label: 'Dashboard', icon: LayoutGrid, end: tru
 
 const SECTIONS = [
   {
-    label: 'GESTIÓN',
+    label: 'CONFIGURACIÓN',
     items: [
+      { to: '/admin/roles', label: 'Roles y permisos', icon: Shield },
       { to: '/admin/usuarios', label: 'Usuarios', icon: Users },
-      { to: '/admin/roles', label: 'Roles', icon: Shield },
-      { to: '/admin/proveedores', label: 'Proveedores', icon: Building2 },
-      { to: '/admin/terceros', label: 'Terceros', icon: Briefcase },
     ],
   },
   {
@@ -40,22 +41,32 @@ const SECTIONS = [
     items: [
       { to: '/admin/productos', label: 'Productos', icon: Package },
       { to: '/admin/categorias', label: 'Categorías', icon: Tag },
+      { to: '/admin/marcas', label: 'Marcas', icon: Stamp },
+    ],
+  },
+  {
+    label: 'CONTACTOS',
+    items: [
+      { to: '/admin/clientes', label: 'Clientes', icon: UserRound },
+      { to: '/admin/proveedores', label: 'Proveedores', icon: Building2 },
+      { to: '/admin/terceros', label: 'Terceros', icon: Building2 },
     ],
   },
   {
     label: 'OPERACIÓN',
     items: [
       { to: '/admin/pedidos-cotizacion', label: 'Pedidos-Cotización', icon: FileText },
-      { to: '/admin/ordenes-compra', label: 'Órd. de Compra', icon: ShoppingCart },
-      { to: '/admin/entregas', label: 'Entregas', icon: Truck },
-      { to: '/admin/reencauche', label: 'Reencauche', icon: Wrench },
+      { to: '/admin/ventas', label: 'Ventas', icon: Receipt },
+      { to: '/admin/compras', label: 'Compras', icon: ShoppingCart },
+      { to: '/admin/solicitudes-servicio', label: 'Solicitudes de servicio', icon: Wrench },
     ],
   },
   {
-    label: 'FINANZAS',
+    label: 'CARTERA',
     items: [
-      { to: '/admin/creditos', label: 'Créditos', icon: CreditCard },
-      { to: '/admin/abonos', label: 'Abonos', icon: Receipt },
+      { to: '/admin/creditos', label: 'Cartera', icon: CreditCard },
+      { to: '/admin/solicitudes-credito', label: 'Solicitudes de crédito', icon: HandCoins },
+      { to: '/admin/abonos', label: 'Abonos', icon: Banknote },
     ],
   },
 ];
@@ -161,21 +172,19 @@ export default function AdminSidebar({ profile, mobileOpen = false, onCloseMobil
             return (
             <div key={section.label} className="mb-4">
               {!collapsed && (
-                <div className="mb-1.5 flex items-center justify-between gap-2 px-2.5">
-                  <p className="text-[10px] font-bold tracking-wider text-slate-600">{section.label}</p>
-                  <button
-                    type="button"
-                    onClick={() => alternarSeccion(section.label)}
-                    aria-expanded={abierta}
-                    aria-label={`${abierta ? 'Ocultar' : 'Mostrar'} ${section.label}`}
-                    className="flex h-5 w-5 items-center justify-center rounded text-slate-600 transition-colors hover:bg-white/5 hover:text-slate-300"
-                  >
-                    <ChevronDown
-                      size={13}
-                      className={`transition-transform duration-200 ${abierta ? '' : '-rotate-90'}`}
-                    />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => alternarSeccion(section.label)}
+                  aria-expanded={abierta}
+                  aria-label={`${abierta ? 'Ocultar' : 'Mostrar'} ${section.label}`}
+                  className="mb-1.5 flex w-full items-center justify-between gap-2 rounded px-2.5 py-0.5 text-slate-600 transition-colors hover:bg-white/5 hover:text-slate-300"
+                >
+                  <span className="text-[10px] font-bold tracking-wider">{section.label}</span>
+                  <ChevronDown
+                    size={13}
+                    className={`shrink-0 transition-transform duration-200 ${abierta ? '' : '-rotate-90'}`}
+                  />
+                </button>
               )}
               {/* El plegado se anima con grid-rows: no necesita medir alturas */}
               <div
@@ -229,6 +238,17 @@ export default function AdminSidebar({ profile, mobileOpen = false, onCloseMobil
               </div>
             )}
           </div>
+          {/* El administrador también puede entrar al portal del cliente */}
+          <NavLink
+            to="/portal"
+            onClick={onCloseMobile}
+            title={collapsed ? 'Portal del cliente' : undefined}
+            className="mt-1 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-amber-400/90 transition-colors hover:bg-amber-400/10 hover:text-amber-400"
+          >
+            <ShoppingBag size={15} className="shrink-0" />
+            {!collapsed && <span className="truncate">Portal del cliente</span>}
+          </NavLink>
+
           <NavLink
             to="/"
             className="mt-1 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-slate-500 hover:bg-white/5 hover:text-slate-300"

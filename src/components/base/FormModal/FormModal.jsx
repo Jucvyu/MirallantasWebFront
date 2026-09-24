@@ -22,6 +22,8 @@ const MODE_META = {
  *
  * sections: [{ title, fields: [ ...ver Field.jsx ] }]
  * mode: 'create' | 'edit' | 'view'
+ * validate: (values) => ({ campo: 'mensaje' }) para las reglas que miran
+ *   varios campos a la vez, como la cuota inicial frente al total
  */
 export default function FormModal({
   title,
@@ -31,6 +33,7 @@ export default function FormModal({
   mode = 'create',
   size = 'lg',
   submitLabel,
+  validate,
   onSubmit,
   onClose,
 }) {
@@ -38,13 +41,20 @@ export default function FormModal({
   const [errors, setErrors] = useState({});
   const meta = MODE_META[mode] ?? MODE_META.create;
 
-  // Un campo puede limitarse a un modo con `only: 'create'` (p. ej. la
-  // contraseña, que se pide al crear pero no al editar ni al ver el detalle).
+  // Un campo puede limitarse a uno o varios modos con `only` (p. ej. la
+  // contraseña, que se pide al crear, o el motivo de cancelación, que solo
+  // se ve al editar o al consultar el detalle).
+  const aplicaEnModo = (campo) => {
+    if (!campo.only) return true;
+    return Array.isArray(campo.only) ? campo.only.includes(mode) : campo.only === mode;
+  };
+
   const sections = useMemo(
     () =>
       rawSections
-        .map((s) => ({ ...s, fields: s.fields.filter((f) => !f.only || f.only === mode) }))
+        .map((s) => ({ ...s, fields: s.fields.filter(aplicaEnModo) }))
         .filter((s) => s.fields.length > 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [rawSections, mode],
   );
 
@@ -64,6 +74,8 @@ export default function FormModal({
     requiredKeys.forEach((k) => {
       if (!String(values[k] ?? '').trim()) next[k] = 'Este campo es obligatorio';
     });
+    // Reglas que dependen de varios campos a la vez
+    Object.assign(next, validate?.(values) ?? {});
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 

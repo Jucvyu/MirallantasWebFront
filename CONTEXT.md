@@ -508,6 +508,61 @@ La app dejó de manejar precios de producto: el cliente pide y el asesor cotiza.
   propia fila.
 - **Abonos**: el pantallazo de la consignación solo se pide cuando el método de pago no es efectivo.
 
+### Comprobantes, altas desde listado y cancelación de entregas
+
+- **Comprobante de venta** (`features/shared/ComprobanteVentaModal.jsx`): se arma solo con lo que ya
+  quedó en el pedido —datos de MiraLlantas, cliente, método de pago, ítems, total y pie de
+  contacto—; nadie lo captura. El administrador lo abre con el botón de la columna Acciones y el
+  cliente con "Ver recibo" en el detalle de su pedido. En ambos casos solo aparece cuando la
+  cotización está cerrada (`ESTADO_COTIZACION_COMPLETADA`, hoy "Entregado").
+- **Sidebar del admin**: toda la cabecera de la sección pliega y despliega, no solo el chevron.
+- **`features/admin/shared/SelectorPedidos.jsx`**: listado de cotizaciones con buscador, filtro por
+  fecha y filtro por cliente, en vez del desplegable de IDs sueltos. Lo usan las dos altas nuevas:
+  - `NuevaOrdenCompraModal` — sin fecha de la orden (es la de hoy) ni estado (nace "Pendiente").
+  - `NuevaEntregaModal` — al elegir la cotización trae nombre, teléfono y dirección del cliente
+    desde su ficha; la fecha es la de hoy y el estado nace "Pendiente". El motivo de cancelación
+    ya no se captura al crear: solo se ve al editar o en el detalle.
+- **`context/EntregasContext.jsx`**: una sola lista de entregas para admin y portal (antes había
+  `entregas` y `clientEntregas` por separado), montada en `App`. El flujo de cancelación la cruza:
+  1. El cliente pulsa "Cancelar entrega" en el seguimiento, escribe el motivo y la entrega pasa a
+     **"Solicitud de cancelación"** con el trámite en "Pendiente de revisión".
+  2. En el listado del admin esa fila muestra un botón extra que abre `SolicitudCancelacionModal`
+     con el motivo. Ahí se **aprueba** (la entrega queda "Cancelado") o se **rechaza**, y el
+     formulario del motivo del rechazo solo aparece al pulsar "Rechazar".
+  3. El cliente ve el resultado en el mismo modal: "Aprobada" o "Rechazada" con la respuesta del
+     asesor.
+- `DataTable` sumó dos capacidades para esto: modo controlado (`rows` / `onRowsChange`, para listas
+  que viven en un contexto) y `rowActions(row)` para botones extra en la columna de acciones.
+  `FormModal` acepta ahora `only: ['edit', 'view']` además de un solo modo.
+
+### Catálogo, filtros múltiples y acceso denegado
+
+- **Filtros con selección múltiple** en todos lados: `Dropdown` acepta `multiple`, y `DataTable`,
+  `CardList`, el catálogo del cliente y el selector de cotizaciones guardan un arreglo por filtro
+  (la fila entra si coincide con cualquiera de las opciones marcadas).
+- **Productos**: nuevo estado "No disponible"; la categoría pasó a obligatoria; el listado avisa con
+  una pastilla discreta ("Sin foto") cuando al producto le falta la imagen; se quitaron el código de
+  producto del alta y el botón de exportar.
+- **El estado ya no se captura al crear** en ningún módulo (`only: ['edit', 'view']`): cada entidad
+  nace con su valor por defecto vía `normalize` y se mueve después desde el listado o al editar.
+  En Pedidos-Cotización los cambios siguen `FLUJO_ESTADOS_COTIZACION`, así que el desplegable solo
+  ofrece transiciones válidas y bloquea los estados finales.
+- **Marcas** (`features/admin/generic/MarcasPage.jsx`): CRUD propio. La API de wheel-size quedó
+  descartada — exige `user_key` de pago (responde 403) y cataloga marcas de vehículo, no de llanta.
+- **Categorías**: color propio elegido con una paleta de 12 tonos con nombre más un cuentagotas para
+  un color a medida. Ese color se refleja en el catálogo del cliente, en la pastilla de la
+  miniatura y en el detalle del producto. Sin exportación.
+- **Acceso denegado** (`features/auth/AccesoDenegadoPage.jsx`, ruta `/acceso-denegado`): pantalla
+  403 con salidas para volver o cambiar de cuenta. El navbar del portal tiene un botón pequeño con
+  candado para probarla.
+- **Selectores de foráneas**: `components/base/SearchSelect` añade barra de búsqueda cuando el
+  catálogo supera los 15 registros (`MINIMO_PARA_BUSCAR` en `Field.jsx`), y cuando un catálogo está
+  vacío el campo muestra el aviso "No hay [dato] registrado, por favor registra al menos uno para
+  poder continuar con el registro" en vez de un desplegable inútil.
+- **Comprobante de venta**: botón de descarga (genera el documento en el navegador, sin backend) y
+  el detalle de la cotización lista productos y servicios en la misma tabla.
+- El formulario de "Agregar servicio" ya no pide el servicio: la empresa presta uno solo.
+
 ## 10. Siguientes pasos sugeridos (pendientes, no iniciados)
 
 1. Revisar capturas/Figma de **Mobile** y adaptar layouts.
@@ -516,3 +571,163 @@ La app dejó de manejar precios de producto: el cliente pide y el asesor cotiza.
 4. Implementar autenticación real en `LoginPage` (hoy solo navega).
 5. Reemplazar `TireThumb` por fotos reales de producto.
 6. Opcional: code-splitting por ruta para reducir el tamaño del bundle inicial.
+
+## Rediseño de inputs, altas por listado y garantía como interruptor
+
+- **`src/components/base/formStyles.js`** (nuevo) concentra el aspecto de los
+  campos: caja `rounded-xl` con fondo propio, sombra suave, contorno que se
+  aviva al pasar el cursor y halo ámbar al enfocar, en vez del input plano
+  del navegador. Lo importan `Field`, `SearchSelect`, `DataTable`,
+  `CardList`, `LoginPage`, `TotalCotizacion`, los selectores de cotizaciones
+  y créditos y todos los modales armados a mano (`NuevoPedidoModal`,
+  `NuevaOrdenCompraModal`, `NuevaEntregaModal`, `SolicitudCancelacionModal`,
+  `EntregaModal`, `PedidoPanel`, `RegistrarAbonoModal`).
+- **`Field`** estrena el tipo `switch`: guarda `'Sí'` / `'No'` y se pinta como
+  interruptor verde. Lo usa la garantía de la orden de reencauche.
+- **"Nuevo pedido-cotización"** ya no pide el estado; la cotización nace en
+  `Pendiente`.
+- **`SelectorPedidos`** acepta `filtro` y `vacioLabel` para acotar qué
+  cotizaciones ofrece. **`SelectorCreditos`** (nuevo) hace lo mismo con los
+  créditos: buscador y selección única.
+- **`NuevoCreditoModal`** (nuevo) financia una cotización finalizada elegida
+  del listado; el cliente sale de la propia cotización, y la fecha límite se
+  calcula con el plazo (30/60/90 días).
+- **`NuevoAbonoModal`** (nuevo) elige el crédito de un listado con buscador y
+  solo pide monto y método de pago: la fecha es la de hoy y el saldo se
+  calcula y se muestra ya resuelto.
+
+## Campos numéricos, perfil desplegable y acceso al portal
+
+- **`formStyles.js`** suma `soloDigitos`, `formatoMiles` y `soloTelefono`.
+  `Field` los aplica mientras se escribe en los tipos `money`, `number` y
+  `tel` (que se renderizan como `type="text"` con `inputMode="numeric"` para
+  poder filtrar), y los modales armados a mano hacen lo propio con sus
+  importes y cantidades: en ningún campo numérico entran letras.
+- **`NuevoAbonoModal`** recorta el monto al saldo del crédito en cuanto se
+  escribe uno mayor, y avisa de que lo ajustó; también recalcula el recorte
+  si se cambia de crédito después de teclear el monto.
+- **`PerfilMenu`** (nuevo) sustituye al modal que abría el avatar: despliega
+  una tarjeta anclada con el detalle inicial de la ficha y los botones
+  "Cerrar" y "Editar" —este último sí abre el `FormModal`—. Lo usan el
+  topbar del administrador y el navbar del cliente.
+- **`AdminSidebar`** incluye "Portal del cliente" justo encima de "Salir",
+  para que el administrador pueda entrar al módulo de clientes.
+
+## Rediseño completo sobre el modelo relacional y la ficha actualizada
+
+El proyecto se realineó con el modelo entidad-relación de 14 tablas, la
+ficha de proyecto actualizada y el diagrama de casos de uso.
+
+**Modelo de datos.** `mockData.js` se reescribió entero: las entidades y sus
+claves siguen el nombre de las columnas (`nombreRazonSocial`,
+`numeroDocumento`, `saldoPendiente`, `precioVenta`, `estadoEntrega`...). Los
+catálogos que en el modelo guardan el estado como `TINYINT(1)` usan el
+interruptor Activo/Inactivo; venta y compra, que lo guardan como texto,
+tienen su propio flujo de estados.
+
+**Módulos del administrador** (16): Dashboard; Roles y permisos, Usuarios;
+Productos, Categorías, Marcas, Servicios; Clientes, Proveedores, Terceros;
+Pedidos-Cotización, Ventas, Compras, Solicitudes de servicio; Créditos,
+Solicitudes de crédito, Abonos.
+
+**Portal del cliente**: Inicio, Catálogo (con precios y stock),
+Mis Cotizaciones-Pedido y Mi Cartera (créditos, abonos y solicitud de
+crédito).
+
+**Decisiones tomadas con el cliente del proyecto:**
+
+- La cotización-pedido se conserva y convive con Venta: la venta se genera
+  cuando la cotización llega a "Completada".
+- Roles, permisos y usuarios se mantienen aunque el modelo no los incluya,
+  porque son el primer objetivo de la ficha.
+- El módulo de entregas desapareció. El estado de entrega vive ahora dentro
+  de la cotización-pedido (despacho al cliente) y de la compra (recepción
+  del proveedor), con el flujo secuencial pendiente → en camino → entregado
+  y la posibilidad de cancelar antes de entregar.
+- Los productos muestran código, stock, precio de compra y precio de venta,
+  y el precio de venta también se ve en el catálogo del cliente.
+
+**Financiación.** La ficha exige interés por plazo y una cuota inicial del
+50%: `INTERES_POR_PLAZO` (3/6/9% a 30/60/90 días) y `CUOTA_INICIAL_CREDITO`
+alimentan tanto el carrito del cliente como la cotización del asesor, y
+ambos llegan al mismo total.
+
+**Piezas nuevas o reescritas:** `SelectorCotizaciones`, `SelectorCreditos`,
+`EstadoEntrega`, `DetalleCotizacionModal`, `NuevaCompraModal`,
+`SolicitarCreditoModal`, `CarteraPage`, `ServiciosPage`, `ClientesPage`,
+`VentasPage`, `SolicitudesServicioPage`, `SolicitudesCreditoPage`.
+Se eliminaron `EntregasPage`, `NuevaEntregaModal`,
+`SolicitudCancelacionModal`, `EntregasContext`, `EntregaModal`,
+`OrdenesCompraPage`, `NuevaOrdenCompraModal`, `ReencauchePage`,
+`SelectorPedidos` y `NuevoPedidoPage`.
+
+## Ajustes de operación: anulaciones, comprobantes de abono y cuota inicial
+
+- **`DataTable`** gana `canView` / `canEdit` / `canDelete` para ocultar cada
+  acción de la fila, `formValidate` para las reglas que miran varios campos
+  a la vez, y concordancia de género en los títulos ("Nueva venta", no
+  "Nuevo venta"). `rowActions` ahora recibe `update(patch)` para modificar
+  su propia fila.
+- **`FormModal`** acepta `validate(values)`.
+- **Módulo de servicios eliminado**: el catálogo `servicios` sigue en los
+  datos porque alimenta las líneas de servicio, pero ya no tiene pantalla.
+- **Roles y Usuarios** dejan de cambiar el estado desde el listado.
+  **Categorías** pierde además el ver detalle y el eliminar.
+- **Proveedores** filtra por nombre o razón social.
+- **Ventas**: proveedor, estado de entrega editable y botón de anular con
+  confirmación. La cuota inicial no puede bajar del 50% del total.
+- **Compras**: botón de anular con confirmación (la orden anulada cancela
+  también su entrega); una compra recibida ya no se anula ni se borra.
+- **Cotización-pedido**: se asocia proveedor y queda un único "ver detalle",
+  el integrado. La primera cuota se puede ajustar, con el mismo mínimo.
+- **Cartera** (antes Créditos): sin editar ni eliminar, y con un botón por
+  crédito que abre el historial de abonos, permite subir uno nuevo y
+  descargar el comprobante de los confirmados. `AbonosAdminContext`
+  comparte la lista entre la cartera y el listado de Abonos.
+- **Abonos**: `ComprobanteAbonoModal` para los confirmados y carga
+  obligatoria del pantallazo al registrarlos (salvo en efectivo).
+- **Portal**: una cotización a crédito solo se envía tras registrar el abono
+  de la cuota inicial —mínimo el 50%, con su comprobante—, que aparece
+  luego en el aviso de envío.
+
+## Acceso, animaciones y crédito único
+
+- **Login**: valida con avisos propios (`noValidate`, nada de globos del
+  navegador) y suma los formularios de **crear cuenta** y **¿olvidaste tu
+  contraseña?**, ambos con validación cruzada —correo con formato, mínimo
+  de caracteres y contraseñas que coincidan—.
+- **`SplashScreen`**: pantalla de carga que solo aparece al iniciar sesión,
+  con la llanta girando y una barra que se llena antes de entrar al panel.
+- **Animaciones**: `ml-aparece` (entrada de una pieza), `ml-vista` (cambio
+  de módulo), `ml-tarjeta` (realce al pasar el cursor) y `ml-pulsable`
+  (el botón cede al pulsarlo). Todo se anula con `prefers-reduced-motion`.
+- Roles, Usuarios y Categorías pierden la columna de estado.
+- **Nueva venta** suma el comprobante de pago.
+- El carrito del catálogo tiene **scroll propio** (`overscroll-contain`), así
+  que el catálogo no se mueve mientras el cursor está sobre la cotización.
+- En el detalle, el botón de menos **saca la línea** cuando ya solo queda
+  una unidad; la papelera sigue estando.
+- "Abonar la cuota inicial" muestra siempre el cuadro del comprobante,
+  obligatorio salvo en efectivo.
+- Los KPIs del dashboard vuelven a ser *Ventas del mes* y *Pedidos activos*.
+- **Cartera**: el cliente solo puede tener **un crédito a la vez**. Mientras
+  esté abierto, el saldo usable se muestra en negativo por el total de la
+  cotización financiada, en rojo en el navbar, en la cartera y en el
+  carrito, y no se puede pedir otro crédito ni abonar una cuota inicial
+  nueva.
+
+## Dos cuentas de cliente para pruebas
+
+El portal trabaja con un cliente en sesión (`SesionContext`), que el login
+elige y `localStorage` recuerda para que aguante una recarga. Hay dos
+cuentas de prueba en `clientesDemo`:
+
+- **maria@gmail.com** — cartera con el crédito CRE-002 abierto: saldo usable
+  en negativo, sin poder pedir otro crédito.
+- **lfmora@yahoo.com** — Luis Fernando Mora (CLI006), sin créditos, abonos
+  ni solicitudes: cupo completo de $ 2.000.000 y crédito disponible. Sus
+  tres cotizaciones son todas de contado.
+
+`CreditoProvider` y `AbonosProvider` reciben los datos de la cuenta activa
+y se remontan con `key` al cambiar de cliente, así que el saldo nunca se
+arrastra de una cuenta a otra.

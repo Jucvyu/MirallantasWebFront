@@ -1,43 +1,48 @@
 import PageHeader from '../../../components/base/PageHeader';
 import DataTable from '../../../components/base/DataTable';
-import { modulosPermiso, roles } from '../../../data/mockData';
+import { estadosActivo, modulosPermiso, roles } from '../../../data/mockData';
 
+// Roles y permisos. Al crear un rol se marcan los módulos a los que
+// tendrá acceso, tal como pide el proceso de configuración de la ficha.
 const columns = [
   { key: 'id', label: 'ID' },
-  { key: 'nombre', label: 'Nombre' },
-  { key: 'permisos', label: 'Permisos' },
+  { key: 'nombre', label: 'Rol' },
+  { key: 'descripcion', label: 'Descripción' },
+  {
+    key: 'permisos',
+    label: 'Permisos',
+    render: (row) => `${String(row.permisos ?? '').split(',').filter(Boolean).length} módulos`,
+  },
 ];
 
-// Tablas `rol` (nombre_rol) y `rol_permiso` → `permiso` (modulo).
 const formSections = [
   {
-    title: 'Rol',
+    title: 'Datos del rol',
     fields: [
-      { key: 'nombre', label: 'Nombre del rol', required: true, span: 2, placeholder: 'Vendedor' },
+      { key: 'nombre', label: 'Nombre del rol', required: true, span: 2, placeholder: 'Asesor de ventas' },
+      { key: 'descripcion', label: 'Descripción', type: 'textarea', span: 2 },
+      { key: 'estado', label: 'Estado', type: 'select', options: estadosActivo, only: ['edit', 'view'] },
     ],
   },
   {
-    title: 'Permisos por módulo',
+    title: 'Permisos',
     fields: [
       {
-        key: 'modulos',
-        label: 'Módulos con acceso',
+        key: 'permisos',
+        label: 'Módulos a los que accede',
         type: 'checkboxes',
         span: 2,
+        required: true,
         options: modulosPermiso,
-        hint: 'Cada módulo seleccionado crea una fila en rol_permiso.',
+        hint: 'El rol solo verá en el menú los módulos marcados.',
       },
     ],
   },
 ];
 
-/** `permisos` del listado es el conteo de módulos seleccionados. */
+/** Los roles nuevos entran activos. */
 function normalize(values) {
-  const modulos = String(values.modulos ?? '')
-    .split(',')
-    .map((m) => m.trim())
-    .filter(Boolean);
-  return { ...values, permisos: modulos.length };
+  return { estado: 'Activo', ...values };
 }
 
 export default function RolesPage() {
@@ -48,9 +53,11 @@ export default function RolesPage() {
         title="Roles y permisos"
         columns={columns}
         data={roles}
+        newLabel="Nuevo rol"
         formSections={formSections}
         entityName="rol"
         normalize={normalize}
+        filters={[{ key: 'estado', label: 'Estado', options: estadosActivo }]}
       />
     </div>
   );

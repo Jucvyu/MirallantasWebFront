@@ -1,23 +1,21 @@
 import { estadosEvidenciaCarcasa, servicios } from '../../data/mockData';
 
 /**
- * Formulario de una línea de servicio (reencauche).
+ * Formulario de una solicitud de servicio (reencauche).
  *
- * Corresponde a `cotizacion_detalle_servicio` (servicio, cantidad de llantas,
- * precio unitario) más `evidencia_carcasa` (foto, descripción, estado de
- * aptitud y observaciones).
+ * Corresponde al `detalle_servicio` de la venta —servicio, cantidad y
+ * precio— más la evidencia de la carcasa que exige el proceso de servicios
+ * de la ficha: foto de la llanta usada, descripción y aptitud.
  *
  * Hay dos variantes porque cliente y administrador no llenan lo mismo:
  *
- * - **Cliente**: solo describe la llanta que quiere reencauchar. No elige el
+ * - **Cliente**: describe la llanta que quiere reencauchar. No elige el
  *   servicio ni pone precio —eso lo define el asesor al cotizar— y tampoco
- *   califica la evidencia, que entra siempre como "Pendiente de revisión".
- * - **Admin**: elige el servicio concreto y puede marcar la aptitud de la
- *   carcasa. El valor no se captura aquí: el total de la cotización se fija
- *   después, desde el listado de Pedidos-Cotización.
+ *   califica la evidencia, que entra como "Pendiente de revisión".
+ * - **Admin**: además elige la modalidad del servicio y marca la aptitud de
+ *   la carcasa tras revisar la foto.
  */
 
-// ---- Campos comunes a las dos variantes ---------------------------------
 const CANTIDAD = {
   key: 'cantidad',
   label: 'Cantidad de llantas',
@@ -25,6 +23,8 @@ const CANTIDAD = {
   required: true,
   placeholder: '4',
 };
+
+const MEDIDAS = { key: 'medidas', label: 'Medidas de la llanta', placeholder: '295/80R22.5' };
 
 const FOTO = {
   key: 'foto',
@@ -44,17 +44,15 @@ const DESCRIPCION = {
   placeholder: 'Marca, medida, kilometraje aproximado, estado del labrado...',
 };
 
-const OBSERVACIONES = { key: 'observaciones', label: 'Observaciones', placeholder: 'Notas adicionales' };
-
 // ---- Variante del portal del cliente ------------------------------------
 export const servicioSectionsCliente = [
   {
     title: 'Servicio solicitado',
-    fields: [{ ...CANTIDAD, span: 2 }],
+    fields: [CANTIDAD, MEDIDAS],
   },
   {
     title: 'Evidencia de la carcasa',
-    fields: [FOTO, DESCRIPCION, { ...OBSERVACIONES, span: 2 }],
+    fields: [FOTO, DESCRIPCION],
   },
 ];
 
@@ -65,13 +63,15 @@ export const servicioSectionsAdmin = [
     fields: [
       {
         key: 'servicio',
-        label: 'Servicio',
+        label: 'Modalidad del servicio',
         type: 'select',
         required: true,
         span: 2,
-        options: servicios.map((s) => s.nombre),
+        options: servicios.filter((s) => s.estado === 'Activo').map((s) => s.nombre),
+        emptyLabel: 'servicio',
       },
       CANTIDAD,
+      MEDIDAS,
     ],
   },
   {
@@ -83,18 +83,15 @@ export const servicioSectionsAdmin = [
         key: 'estadoEvidencia',
         label: 'Estado de la evidencia',
         type: 'select',
+        span: 2,
         options: estadosEvidenciaCarcasa,
         hint: 'Lo confirma el asesor tras revisar la foto.',
       },
-      OBSERVACIONES,
     ],
   },
 ];
 
 export const servicioInitialValues = { estadoEvidencia: 'Pendiente de revisión', cantidad: '1' };
-
-/** Nombre que lleva la línea cuando el cliente no elige el servicio. */
-export const SERVICIO_POR_DEFECTO = 'Reencauche';
 
 /** "$ 320.000" o "320000" → 320000 */
 export function toNumber(value) {

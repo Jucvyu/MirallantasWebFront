@@ -96,3 +96,60 @@ body {
 *::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* --- Animaciones de la interfaz ------------------------------------------
+   Movimientos cortos y discretos: nada rebota ni se desplaza mucho. Todo
+   queda anulado si el sistema pide menos movimiento. */
+@keyframes ml-aparece {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Entrada suave de una pieza suelta (títulos, avisos, tarjetas) */
+.ml-aparece {
+  animation: ml-aparece 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Entrada de la vista completa al cambiar de módulo */
+.ml-vista {
+  animation: ml-aparece 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Realce mínimo de las tarjetas al pasar el cursor */
+.ml-tarjeta {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.ml-tarjeta:hover {
+  transform: translateY(-2px);
+}
+
+/* Los botones principales ceden un poco al pulsarlos */
+.ml-pulsable {
+  transition: transform 140ms ease, background-color 200ms ease;
+}
+.ml-pulsable:active {
+  transform: scale(0.97);
+}
+
+/* --- Pantalla de carga del acceso --------------------------------------- */
+@keyframes ml-splash-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes ml-splash-gira {
+  to { transform: rotate(360deg); }
+}
+@keyframes ml-splash-barra {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+
+.ml-splash { animation: ml-splash-in 200ms ease-out both; }
+.ml-splash-tire { animation: ml-splash-gira 1100ms linear infinite; }
+.ml-splash-bar { animation: ml-splash-barra linear both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ml-aparece, .ml-vista, .ml-splash, .ml-splash-tire, .ml-splash-bar { animation: none; }
+  .ml-tarjeta:hover, .ml-pulsable:active { transform: none; }
+  .ml-splash-bar { width: 100%; }
+}

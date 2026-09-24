@@ -1,35 +1,36 @@
 import { useMemo, useState } from 'react';
 import {
   CalendarDays,
+  Check,
   ChevronDown,
   CreditCard,
+  FileText,
+  MapPin,
   Package,
   Plus,
   Receipt,
-  Truck,
   Wrench,
 } from 'lucide-react';
 import Badge from '../../components/base/Badge';
 import CardList from '../../components/base/CardList';
 import { useAbonos } from '../../context/AbonosContext';
+import { useSesion } from '../../context/SesionContext';
 import {
-  clientCreditos,
-  clientEntregas,
-  clientPedidos,
+  ESTADO_COTIZACION_COMPLETADA,
   estadosCotizacion,
-  estadosCredito,
   estadosEntrega,
-  estadosOrdenReencauche,
+  estadosServicio,
+  metodosPago,
+  solicitudesServicio,
 } from '../../data/mockData';
-import EntregaModal from './EntregaModal';
 import ReencaucheModal from './ReencaucheModal';
 import RegistrarAbonoModal from './RegistrarAbonoModal';
+import ComprobanteVentaModal from '../shared/ComprobanteVentaModal';
 
 // -------------------------------------------------------------------------
-// Aspecto de la carta según el estado del crédito: contorno marcado y, solo
-// en modo claro, un fondo del mismo tono muy tenue para que se distinga
-// mejor. En oscuro basta con el contorno, así que la carta conserva el
-// fondo normal. Los pedidos de contado quedan neutros.
+// Aspecto de la carta según cómo va el crédito: contorno marcado y, solo en
+// modo claro, un fondo del mismo tono muy tenue. En oscuro basta con el
+// contorno. Las cotizaciones de contado quedan neutras.
 // -------------------------------------------------------------------------
 const ESTILO_CREDITO = {
   'Al día': 'border-emerald-400 bg-emerald-50 dark:border-emerald-400/70 dark:bg-brand-navy-800',
@@ -39,94 +40,95 @@ const ESTILO_CREDITO = {
 
 const ESTILO_NEUTRO = 'border-slate-200 bg-white dark:border-white/10 dark:bg-brand-navy-800';
 
-/** El botón de entrega solo se habilita cuando el pedido espera despacho. */
-const ESTADO_DESPACHABLE = 'Por entregar';
+/** Pasos por los que avanza el despacho, en orden. */
+const PASOS_ENTREGA = ['Pendiente', 'En camino', 'Entregado'];
 
 // Valores de "sin dato" que se ofrecen en los filtros derivados.
 const SIN_CREDITO = 'Sin crédito';
-const SIN_ENTREGA = 'Sin entrega';
 const SIN_REENCAUCHE = 'Sin reencauche';
+
+/** "$ 575.000" → 575000 */
+const aNumero = (v) => Number(String(v ?? '').replace(/\D/g, '')) || 0;
+
+/**
+ * Cómo va el crédito hoy. En el modelo `credito.estado` es un booleano, así
+ * que la condición (al día, vencido o pagado) se deduce del saldo y de la
+ * fecha límite.
+ */
+function condicionCredito(credito) {
+  if (!credito) return null;
+  if (aNumero(credito.saldoPendiente) === 0) return 'Pagado';
+  return new Date(credito.fechaLimite) < new Date() ? 'Vencido' : 'Al día';
+}
 
 export default function ClientPedidosPage() {
   const { abonos, addAbono } = useAbonos();
+  const { nombre, cotizaciones: cotizacionesCliente, creditos } = useSesion();
 
   // Detalles abiertos. Son objetos (y no un solo id) a propósito: se pueden
   // desplegar varias cotizaciones —y varios servicios— al mismo tiempo.
-  const [pedidosAbiertos, setPedidosAbiertos] = useState({});
+  const [cotizacionesAbiertas, setCotizacionesAbiertas] = useState({});
   const [serviciosAbiertos, setServiciosAbiertos] = useState({});
-  const [entregaDe, setEntregaDe] = useState(null);
   const [reencaucheDe, setReencaucheDe] = useState(null);
   const [abonoDe, setAbonoDe] = useState(null);
+  const [reciboDe, setReciboDe] = useState(null);
 
-  const alternarPedido = (id) => setPedidosAbiertos((prev) => ({ ...prev, [id]: !prev[id] }));
+  const alternarCotizacion = (id) => setCotizacionesAbiertas((prev) => ({ ...prev, [id]: !prev[id] }));
   const alternarServicio = (clave) => setServiciosAbiertos((prev) => ({ ...prev, [clave]: !prev[clave] }));
 
   // -----------------------------------------------------------------------
-  // A cada pedido se le adjuntan su crédito y su entrega, y se arma un texto
-  // `buscable` con los números de crédito, entrega y reencauche para que el
-  // buscador los encuentre desde aquí.
+  // A cada cotización se le adjuntan su crédito y las solicitudes de
+  // servicio de sus líneas, y se arma un texto `buscable` para que el
+  // buscador encuentre también por número de crédito o de solicitud.
   // -----------------------------------------------------------------------
-  const pedidos = useMemo(
+  const cotizaciones = useMemo(
     () =>
-      clientPedidos.map((pedido) => {
-        const credito = clientCreditos.find((c) => c.pedido === pedido.id) ?? null;
-        const entrega = clientEntregas.find((e) => e.pedido === pedido.id) ?? null;
-        const reencauches = pedido.detalle
-          .filter((l) => l.tipo === 'servicio' && l.fichaServicio)
-          .map((l) => l.fichaServicio);
+      cotizacionesCliente.map((cot) => {
+        const credito = creditos.find((c) => c.cotizacion === cot.id) ?? null;
+        const solicitudes = cot.detalle
+          .filter((l) => l.tipo === 'servicio' && l.solicitud)
+          .map((l) => solicitudesServicio.find((s) => s.id === l.solicitud))
+          .filter(Boolean);
 
         return {
-          ...pedido,
+          ...cot,
           credito,
-          entrega,
-          reencauches,
-          buscable: [
-            pedido.id,
-            pedido.proveedor,
-            pedido.total,
-            pedido.fecha,
-            credito?.id,
-            entrega?.id,
-            ...reencauches.map((r) => `${r.orden} ${r.taller}`),
-          ]
+          condicion: condicionCredito(credito),
+          solicitudes,
+          buscable: [cot.id, cot.total, cot.fecha, credito?.id, ...solicitudes.map((s) => s.id)]
             .filter(Boolean)
             .join(' '),
         };
       }),
-    [],
+    [cotizacionesCliente, creditos],
   );
 
   // -----------------------------------------------------------------------
-  // Filtros derivados: el dato no está plano en el pedido, así que cada uno
-  // trae su propia función de coincidencia.
+  // Filtros derivados: el dato no está plano en la cotización, así que cada
+  // uno trae su propia función de coincidencia.
   // -----------------------------------------------------------------------
   const filtros = [
-    { key: 'estado', label: 'Pedido', options: estadosCotizacion },
-    { key: 'metodoPago', label: 'Pago' },
+    { key: 'estado', label: 'Cotización', options: estadosCotizacion },
+    { key: 'estadoEntrega', label: 'Entrega', options: estadosEntrega },
+    { key: 'metodoPago', label: 'Pago', options: metodosPago },
     {
       key: 'filtroCredito',
       label: 'Crédito',
-      options: [...estadosCredito, SIN_CREDITO],
-      match: (p, valor) => (valor === SIN_CREDITO ? !p.credito : p.credito?.estado === valor),
-    },
-    {
-      key: 'filtroEntrega',
-      label: 'Entrega',
-      options: [...estadosEntrega, SIN_ENTREGA],
-      match: (p, valor) => (valor === SIN_ENTREGA ? !p.entrega : p.entrega?.estado === valor),
+      options: ['Al día', 'Vencido', 'Pagado', SIN_CREDITO],
+      match: (c, valor) => (valor === SIN_CREDITO ? !c.credito : c.condicion === valor),
     },
     {
       key: 'filtroReencauche',
       label: 'Reencauche',
-      options: [...estadosOrdenReencauche, SIN_REENCAUCHE],
-      match: (p, valor) =>
+      options: [...estadosServicio, SIN_REENCAUCHE],
+      match: (c, valor) =>
         valor === SIN_REENCAUCHE
-          ? p.reencauches.length === 0
-          : p.reencauches.some((r) => r.estado === valor),
+          ? c.solicitudes.length === 0
+          : c.solicitudes.some((s) => s.estado === valor),
     },
   ];
 
-  // Los pedidos a crédito siempre encabezan; dentro de cada grupo manda la fecha.
+  // Las cotizaciones a crédito encabezan; dentro de cada grupo manda la fecha.
   const porGrupoYFecha = (direccion) => (a, b) => {
     const grupo = Number(Boolean(b.credito)) - Number(Boolean(a.credito));
     if (grupo !== 0) return grupo;
@@ -140,80 +142,89 @@ export default function ClientPedidosPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">Mis Pedidos-Cotización</h1>
+      <h1 className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">
+        Mis Cotizaciones-Pedido
+      </h1>
       <p className="mb-5 text-sm text-slate-500 dark:text-slate-400">
-        Historial completo de tus solicitudes · los pedidos a crédito aparecen primero
+        Historial completo de tus solicitudes · las de crédito aparecen primero
       </p>
 
       <CardList
-        items={pedidos}
+        items={cotizaciones}
         searchKeys={['buscable']}
         filters={filtros}
         sortOptions={ordenes}
         stickyToolbar
         emptyIcon="FileText"
-        emptyTitle="Sin pedidos"
-        emptyDescription="Aquí verás tus cotizaciones y pedidos."
-        renderCard={(p) => {
-          const abierto = Boolean(pedidosAbiertos[p.id]);
-          const estilo = p.credito ? ESTILO_CREDITO[p.credito.estado] ?? ESTILO_NEUTRO : ESTILO_NEUTRO;
-          const abonosDelCredito = p.credito ? abonos.filter((a) => a.credito === p.credito.id) : [];
-          const despachable = p.estado === ESTADO_DESPACHABLE;
+        emptyTitle="Sin cotizaciones"
+        emptyDescription="Aquí verás las cotizaciones-pedido que envíes."
+        renderCard={(c) => {
+          const abierto = Boolean(cotizacionesAbiertas[c.id]);
+          const estilo = c.condicion ? ESTILO_CREDITO[c.condicion] ?? ESTILO_NEUTRO : ESTILO_NEUTRO;
+          const abonosDelCredito = c.credito ? abonos.filter((a) => a.credito === c.credito.id) : [];
+          const pasoActual = PASOS_ENTREGA.indexOf(c.estadoEntrega);
+          const cancelada = c.estadoEntrega === 'Cancelado';
 
           return (
             <article
-              key={p.id}
-              className={`flex flex-col rounded-xl border-2 p-5 transition-shadow hover:shadow-md dark:hover:shadow-black/30 ${estilo}`}
+              key={c.id}
+              className={`ml-tarjeta flex flex-col rounded-xl border-2 p-5 hover:shadow-md dark:hover:shadow-black/30 ${estilo}`}
             >
-              {/* ---- Estados: crédito (si aplica) y pedido, arriba a la izquierda ---- */}
+              {/* ---- Estados: crédito (si aplica) y cotización ---- */}
               <div className="flex flex-col gap-1.5">
-                {p.credito && (
+                {c.credito && (
                   <div className="flex items-center gap-2">
-                    <span className="w-14 shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                    <span className="w-20 shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                       Crédito
                     </span>
-                    <Badge>{p.credito.estado}</Badge>
+                    <Badge>{c.condicion}</Badge>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  <span className="w-14 shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-                    Pedido
+                  <span className="w-20 shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                    Cotización
                   </span>
-                  <Badge>{p.estado}</Badge>
+                  <Badge>{c.estado}</Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-20 shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                    Entrega
+                  </span>
+                  <Badge>{c.estadoEntrega}</Badge>
                 </div>
               </div>
 
-              {/* ---- Resumen del pedido ---- */}
+              {/* ---- Resumen ---- */}
               <div className="mt-4">
-                <p className="text-sm font-bold text-slate-900 dark:text-white">{p.id}</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-white">{c.id}</p>
                 <p className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                  <CalendarDays size={12} /> {p.fecha}
+                  <CalendarDays size={12} /> {c.fecha}
                 </p>
               </div>
 
               <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                <Truck size={13} /> {p.proveedor}
+                <Package size={13} /> {c.items} {c.items === 1 ? 'llanta' : 'llantas'}
               </p>
               <p className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                <Package size={13} /> {p.items} {p.items === 1 ? 'llanta' : 'llantas'}
+                <CreditCard size={13} /> {c.metodoPago}
               </p>
-              <p className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                <CreditCard size={13} /> {p.metodoPago}
+              <p className="mt-1.5 flex items-start gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <MapPin size={13} className="mt-px shrink-0" /> {c.direccionEntrega}
               </p>
 
               <div className="mt-4 flex items-end justify-between border-t border-slate-200/70 pt-4 dark:border-white/5">
                 <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                   Total
                 </span>
-                <span className="text-lg font-bold text-slate-900 dark:text-white">{p.total}</span>
+                <span className="text-lg font-bold text-slate-900 dark:text-white">{c.total}</span>
               </div>
 
               {/* ---- Botón que despliega el detalle ---- */}
               <button
                 type="button"
-                onClick={() => alternarPedido(p.id)}
+                onClick={() => alternarCotizacion(c.id)}
                 aria-expanded={abierto}
-                aria-controls={`detalle-${p.id}`}
+                aria-controls={`detalle-${c.id}`}
                 className="mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white/60 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-white dark:border-white/10 dark:bg-transparent dark:text-slate-300 dark:hover:bg-white/5"
               >
                 {abierto ? 'Ocultar detalle' : 'Ver detalle'}
@@ -225,21 +236,24 @@ export default function ClientPedidosPage() {
 
               {/* ---- Detalle desplegable (animado con grid-rows) ---- */}
               <div
-                id={`detalle-${p.id}`}
+                id={`detalle-${c.id}`}
                 className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out ${
                   abierto ? 'mt-3 grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
                 }`}
               >
                 <div className="overflow-hidden">
                   <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                    Detalle de la cotización
+                    Productos y servicios
                   </p>
 
                   <ul className="mt-2 divide-y divide-slate-200/70 rounded-lg border border-slate-200 bg-white/60 dark:divide-white/5 dark:border-white/10 dark:bg-transparent">
-                    {p.detalle.map((linea, i) => {
-                      const claveServicio = `${p.id}-${i}`;
+                    {c.detalle.map((linea, i) => {
+                      const claveServicio = `${c.id}-${i}`;
                       const servicioAbierto = Boolean(serviciosAbiertos[claveServicio]);
                       const esServicio = linea.tipo === 'servicio';
+                      const solicitud = esServicio
+                        ? solicitudesServicio.find((s) => s.id === linea.solicitud)
+                        : null;
 
                       return (
                         <li key={claveServicio} className="px-3 py-2.5">
@@ -268,8 +282,8 @@ export default function ClientPedidosPage() {
                             </span>
                           </div>
 
-                          {/* ---- Ficha del servicio, desplegable aparte ---- */}
-                          {esServicio && linea.fichaServicio && (
+                          {/* ---- Solicitud de reencauche, desplegable aparte ---- */}
+                          {solicitud && (
                             <>
                               <button
                                 type="button"
@@ -294,11 +308,12 @@ export default function ClientPedidosPage() {
                                 <div className="overflow-hidden">
                                   <dl className="space-y-1.5 rounded-md bg-slate-100/80 p-3 text-[11px] dark:bg-white/5">
                                     {[
-                                      ['Modalidad', linea.fichaServicio.modalidad],
-                                      ['Taller', linea.fichaServicio.taller],
-                                      ['Recepción', linea.fichaServicio.recepcion],
-                                      ['Entrega estimada', linea.fichaServicio.entrega],
-                                      ['Garantía', `${linea.fichaServicio.garantiaDias} días`],
+                                      ['Solicitud', solicitud.id],
+                                      ['Modalidad', solicitud.servicio],
+                                      ['Reencauchadora', solicitud.tercero || 'Sin asignar'],
+                                      ['Recepción', solicitud.fecha],
+                                      ['Tiempo estimado', solicitud.tiempoEstimado || 'Por definir'],
+                                      ['Garantía', solicitud.garantia],
                                     ].map(([etiqueta, valor]) => (
                                       <div key={etiqueta} className="flex justify-between gap-3">
                                         <dt className="text-slate-500 dark:text-slate-400">{etiqueta}</dt>
@@ -308,19 +323,19 @@ export default function ClientPedidosPage() {
                                       </div>
                                     ))}
                                     <div className="flex items-center justify-between gap-3 pt-0.5">
-                                      <dt className="text-slate-500 dark:text-slate-400">Evidencia</dt>
+                                      <dt className="text-slate-500 dark:text-slate-400">Carcasa</dt>
                                       <dd>
-                                        <Badge>{linea.fichaServicio.estadoEvidencia}</Badge>
+                                        <Badge>{solicitud.estadoEvidencia}</Badge>
                                       </dd>
                                     </div>
                                     <p className="border-t border-slate-200 pt-2 text-slate-500 dark:border-white/10 dark:text-slate-400">
-                                      {linea.fichaServicio.observaciones}
+                                      {solicitud.descripcion}
                                     </p>
                                   </dl>
 
                                   <button
                                     type="button"
-                                    onClick={() => setReencaucheDe(linea)}
+                                    onClick={() => setReencaucheDe(solicitud)}
                                     className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md bg-blue-500 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-blue-600"
                                   >
                                     <Wrench size={12} /> Ver estado del reencauche
@@ -334,16 +349,57 @@ export default function ClientPedidosPage() {
                     })}
                   </ul>
 
-                  {/* ---- Crédito y abonos del pedido ---- */}
-                  {p.credito && (
+                  {/* ---- Seguimiento de la entrega ---- */}
+                  <div className="mt-4">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                      Entrega
+                    </p>
+                    {cancelada ? (
+                      <p className="mt-2 rounded-md border border-red-400/40 bg-red-500/5 px-3 py-2 text-[11px] font-medium text-red-600 dark:text-red-400">
+                        Entrega cancelada
+                        {c.motivoCancelacion ? ` · ${c.motivoCancelacion}` : ''}
+                      </p>
+                    ) : (
+                      <ol className="mt-2 space-y-2">
+                        {PASOS_ENTREGA.map((paso, i) => {
+                          const hecho = i <= pasoActual;
+                          return (
+                            <li key={paso} className="flex items-center gap-2.5">
+                              <span
+                                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                                  hecho
+                                    ? 'bg-emerald-500 text-white'
+                                    : 'border border-slate-300 text-slate-400 dark:border-white/20'
+                                }`}
+                              >
+                                {hecho ? <Check size={11} strokeWidth={3} /> : i + 1}
+                              </span>
+                              <span
+                                className={`text-[11px] font-semibold ${
+                                  hecho
+                                    ? 'text-slate-800 dark:text-slate-100'
+                                    : 'text-slate-400 dark:text-slate-500'
+                                }`}
+                              >
+                                {paso}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ol>
+                    )}
+                  </div>
+
+                  {/* ---- Crédito y abonos de la cotización ---- */}
+                  {c.credito && (
                     <div className="mt-4">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                          Crédito {p.credito.id}
+                          Crédito {c.credito.id}
                         </p>
                         <button
                           type="button"
-                          onClick={() => setAbonoDe(p.credito)}
+                          onClick={() => setAbonoDe(c.credito)}
                           className="inline-flex items-center gap-1 rounded-md border border-amber-400 px-2 py-1 text-[11px] font-bold text-amber-600 transition-colors hover:bg-amber-400/10 dark:text-amber-400"
                         >
                           <Plus size={12} /> Registrar abono
@@ -352,10 +408,10 @@ export default function ClientPedidosPage() {
 
                       <div className="mt-2 grid grid-cols-2 gap-2">
                         {[
-                          ['VALOR', p.credito.valor],
-                          ['SALDO', p.credito.saldo],
-                          ['PLAZO', `${p.credito.plazoDias} días`],
-                          ['VENCE', p.credito.limite],
+                          ['MONTO', c.credito.montoTotal],
+                          ['SALDO', c.credito.saldoPendiente],
+                          ['PLAZO', `${c.credito.plazoDias} días`],
+                          ['VENCE', c.credito.fechaLimite],
                         ].map(([etiqueta, valor]) => (
                           <div key={etiqueta} className="rounded-md bg-slate-100/80 p-2 dark:bg-white/5">
                             <p className="text-[10px] font-bold tracking-wide text-slate-400 dark:text-slate-500">
@@ -376,7 +432,7 @@ export default function ClientPedidosPage() {
                                   {a.id} · {a.monto}
                                 </p>
                                 <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                                  {a.fecha} · {a.metodo}
+                                  {a.fecha} · {a.metodoPago}
                                 </p>
                               </div>
                               <Badge>{a.estado}</Badge>
@@ -387,20 +443,16 @@ export default function ClientPedidosPage() {
                     </div>
                   )}
 
-                  {/* ---- Seguimiento de la entrega ---- */}
-                  <button
-                    type="button"
-                    disabled={!despachable}
-                    onClick={() => setEntregaDe(p)}
-                    title={
-                      despachable
-                        ? 'Ver el seguimiento del despacho'
-                        : `Disponible cuando el pedido pase a "${ESTADO_DESPACHABLE}"`
-                    }
-                    className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-500 py-2 text-xs font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-500/25 disabled:text-emerald-900/50 dark:disabled:text-white/40"
-                  >
-                    <Truck size={14} /> Ver estado de la entrega
-                  </button>
+                  {/* ---- Comprobante: solo con la cotización completada ---- */}
+                  {c.estado === ESTADO_COTIZACION_COMPLETADA && (
+                    <button
+                      type="button"
+                      onClick={() => setReciboDe(c)}
+                      className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-amber-400 py-2 text-xs font-bold text-amber-600 transition-colors hover:bg-amber-400/10 dark:text-amber-400"
+                    >
+                      <FileText size={14} /> Ver recibo
+                    </button>
+                  )}
                 </div>
               </div>
             </article>
@@ -408,15 +460,19 @@ export default function ClientPedidosPage() {
         }}
       />
 
-      {/* Seguimiento del despacho del pedido seleccionado */}
-      {entregaDe && (
-        <EntregaModal pedido={entregaDe} entrega={entregaDe.entrega} onClose={() => setEntregaDe(null)} />
+      {/* Comprobante de venta generado con los datos de la cotización */}
+      {reciboDe && (
+        <ComprobanteVentaModal
+          venta={{ ...reciboDe, cliente: nombre }}
+          titulo="Recibo de compra"
+          onClose={() => setReciboDe(null)}
+        />
       )}
 
-      {/* Avance de la orden de reencauche de una línea de servicio */}
-      {reencaucheDe && <ReencaucheModal linea={reencaucheDe} onClose={() => setReencaucheDe(null)} />}
+      {/* Avance de la solicitud de reencauche */}
+      {reencaucheDe && <ReencaucheModal solicitud={reencaucheDe} onClose={() => setReencaucheDe(null)} />}
 
-      {/* Registro de un abono sobre el crédito del pedido */}
+      {/* Registro de un abono sobre el crédito de la cotización */}
       {abonoDe && (
         <RegistrarAbonoModal creditoId={abonoDe.id} onSubmit={addAbono} onClose={() => setAbonoDe(null)} />
       )}
