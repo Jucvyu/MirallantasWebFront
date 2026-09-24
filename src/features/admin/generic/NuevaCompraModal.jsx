@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Check, ChevronDown, Plus, Search, ShoppingCart, Trash2 } from 'lucide-react';
+import { Check, ChevronDown, FileText, Plus, Search, ShoppingCart, Trash2 } from 'lucide-react';
 import Modal from '../../../components/base/Modal';
 import {
   BORDER_ERR as BORDE_ERR,
@@ -20,8 +20,10 @@ const pesos = (n) => `$ ${n.toLocaleString('es-CO')}`;
 /**
  * "Nueva compra" (orden de compra al proveedor).
  *
- * La cotización de origen se elige de un listado con buscador y filtros, y
- * el detalle se arma con productos del catálogo: cada línea guarda
+ * La cotización de origen se elige de un listado con buscador y filtros.
+ * Al elegirla, sus líneas de producto pasan directamente al detalle de la
+ * compra —que es lo que hay que abastecer— y el asesor puede sumar los
+ * productos extra que quiera pedirle al mismo proveedor. Cada línea guarda
  * cantidad y precio de compra, igual que `detalle_compra`. La fecha es la
  * de hoy y la compra nace pendiente, con la entrega también pendiente.
  */
@@ -40,6 +42,32 @@ export default function NuevaCompraModal({ onSubmit, onClose }) {
   }, [query]);
 
   const total = lineas.reduce((suma, l) => suma + l.cantidad * l.precioCompra, 0);
+  const deCotizacion = lineas.filter((l) => l.deCotizacion).length;
+
+  /**
+   * Al elegir la cotización, sus productos entran como detalle de la
+   * compra. Los servicios no: esos los ejecuta un tercero, no se compran.
+   */
+  const elegirCotizacion = (c) => {
+    setCotizacion(c.id);
+    setErrores((e) => ({ ...e, lineas: undefined }));
+    setLineas(
+      (c.detalle ?? [])
+        .filter((l) => l.tipo !== 'servicio')
+        .map((l) => {
+          const ficha = productos.find((p) => p.nombre === l.nombre);
+          return {
+            id: ficha?.id ?? l.nombre,
+            nombre: l.nombre,
+            medidas: ficha?.medidas ?? l.medida,
+            precioCompra: ficha?.precioCompra ?? 0,
+            cantidad: l.cantidad,
+            // Marca de origen, para distinguirlas de las que suma el asesor
+            deCotizacion: true,
+          };
+        }),
+    );
+  };
 
   const agregar = (p) => {
     setErrores((e) => ({ ...e, lineas: undefined }));
@@ -78,6 +106,8 @@ export default function NuevaCompraModal({ onSubmit, onClose }) {
         cantidad: l.cantidad,
         unitario: pesos(l.precioCompra),
         subtotal: pesos(l.cantidad * l.precioCompra),
+        // Distingue lo que pedía la cotización de lo que sumó el asesor
+        origen: l.deCotizacion ? 'Cotización' : 'Adicional',
       })),
     });
     close();
@@ -120,10 +150,10 @@ export default function NuevaCompraModal({ onSubmit, onClose }) {
             value={cotizacion}
             filtro={esAbastecible}
             vacioLabel="No hay cotizaciones aprobadas por abastecer."
-            onChange={(c) => setCotizacion(c.id)}
+            onChange={elegirCotizacion}
           />
           <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-            Las cantidades de la compra deben coincidir con las de la cotización.
+            Al elegirla, sus productos pasan al detalle de la compra; las cantidades deben coincidir.
           </p>
         </section>
 
@@ -226,9 +256,14 @@ export default function NuevaCompraModal({ onSubmit, onClose }) {
 
         {/* ---- Detalle de la compra ---- */}
         <section>
-          <div className="mb-3 flex items-center gap-3">
+          <div className="mb-3 flex flex-wrap items-center gap-3">
             <span className={SECTION}>Detalle de la compra</span>
             <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+            {deCotizacion > 0 && (
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-amber-400/15 px-2 py-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                <FileText size={12} /> {deCotizacion} de la cotización
+              </span>
+            )}
           </div>
 
           {lineas.length === 0 ? (
@@ -239,6 +274,9 @@ export default function NuevaCompraModal({ onSubmit, onClose }) {
             >
               <p className="text-sm font-medium text-slate-400 dark:text-slate-500">
                 La compra todavía no tiene líneas
+              </p>
+              <p className="mt-1 text-xs text-slate-400 dark:text-slate-600">
+                Elige una cotización para traer sus productos, o agrégalos del catálogo.
               </p>
             </div>
           ) : (
@@ -256,7 +294,18 @@ export default function NuevaCompraModal({ onSubmit, onClose }) {
                   {lineas.map((l) => (
                     <tr key={l.id} className="border-t border-slate-100 text-slate-600 dark:border-white/5 dark:text-slate-300">
                       <td className="px-4 py-3">
-                        <p className="font-semibold text-slate-800 dark:text-slate-100">{l.nombre}</p>
+                        <p className="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-100">
+                          {l.nombre}
+                          {l.deCotizacion ? (
+                            <span className="rounded bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                              Cotización
+                            </span>
+                          ) : (
+                            <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                              Adicional
+                            </span>
+                          )}
+                        </p>
                         <p className="text-xs text-slate-400 dark:text-slate-500">{l.medidas}</p>
                       </td>
                       <td className="px-4 py-3 text-center">

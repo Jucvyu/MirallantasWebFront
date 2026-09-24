@@ -37,7 +37,7 @@ export default function ClientHomePage() {
         <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-brand-navy-800">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-              Mis cotizaciones-pedido recientes
+              Mis Pedidos-Cotización Recientes
             </h3>
             <Link to="/portal/pedidos" className="text-xs font-semibold text-amber-500 dark:text-amber-400">
               Ver todas
@@ -48,9 +48,7 @@ export default function ClientHomePage() {
               <li key={cot.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
                 <div>
                   <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{cot.id}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {cot.fecha} · entrega {cot.estadoEntrega.toLowerCase()}
-                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{cot.fecha}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-sm text-slate-700 dark:text-slate-200">{cot.total}</span>
@@ -60,7 +58,7 @@ export default function ClientHomePage() {
             ))}
           </ul>
           <p className="pt-3 text-center text-xs text-slate-400 dark:text-slate-600">
-            Mostrando las 4 más recientes de {cotizaciones.length}
+            Mostrando los 4 más recientes de {cotizaciones.length}
           </p>
         </div>
       </div>

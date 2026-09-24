@@ -731,3 +731,20 @@ cuentas de prueba en `clientesDemo`:
 `CreditoProvider` y `AbonosProvider` reciben los datos de la cuenta activa
 y se remontan con `key` al cambiar de cliente, así que el saldo nunca se
 arrastra de una cuenta a otra.
+
+## Orden de compra a partir de la cotización, y tableros como antes
+
+- **`NuevaCompraModal`**: al elegir la cotización de origen, sus líneas de
+  producto pasan directamente al detalle de la compra (los servicios no,
+  porque los ejecuta un tercero). El asesor puede sumar productos extra del
+  catálogo; cada línea se marca como "Cotización" o "Adicional", y ese
+  origen queda guardado en el detalle de la compra.
+- **Dashboard del administrador**: vuelve a su forma anterior —dos
+  indicadores, reencauches por mes, ventas por marca y "Últimos Pedidos"—.
+  Se retiran los filtros por periodo y categoría, el botón de exportar, la
+  gráfica de reporte de ventas y el ranking de productos.
+- **Inicio del portal**: vuelven los indicadores de siempre (Mis
+  Pedidos-Cotización, Próxima entrega, Mi crédito, Total comprado) más el
+  saldo usable, y el bloque "Mis Pedidos-Cotización Recientes".
+- Los códigos de la cotización-pedido vuelven al prefijo **PED-**, que es el
+  que usa el módulo en pantalla.

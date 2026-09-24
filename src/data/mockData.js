@@ -284,7 +284,7 @@ export const SERVICIO_POR_DEFECTO = 'Reencauche en frío';
 
 export const cotizaciones = [
   {
-    id: 'COT-2024-001', cliente: 'Transportes Andinos SAS', fecha: '2024-07-18', metodoPago: 'Contado', proveedor: 'Michelin Colombia SAS',
+    id: 'PED-2024-001', cliente: 'Transportes Andinos SAS', fecha: '2024-07-18', metodoPago: 'Contado', proveedor: 'Michelin Colombia SAS',
     total: '$ 1.968.000', confirmado: true, estado: 'Completada', estadoEntrega: 'Entregado',
     direccionEntrega: 'Cra 30 #25-90, Bogotá', plazoDias: 0, interes: '$ 0', cuotaInicial: '$ 0',
     detalle: [
@@ -292,7 +292,7 @@ export const cotizaciones = [
     ],
   },
   {
-    id: 'COT-2024-002', cliente: 'María García Ruiz', fecha: '2024-07-16', metodoPago: 'Crédito', proveedor: 'Michelin Colombia SAS',
+    id: 'PED-2024-002', cliente: 'María García Ruiz', fecha: '2024-07-16', metodoPago: 'Crédito', proveedor: 'Michelin Colombia SAS',
     total: '$ 798.250', confirmado: true, estado: 'En proceso', estadoEntrega: 'Pendiente',
     direccionEntrega: 'Calle 50 #45-12, Medellín', plazoDias: 30, interes: '$ 23.250', cuotaInicial: '$ 399.125',
     detalle: [
@@ -301,7 +301,7 @@ export const cotizaciones = [
     ],
   },
   {
-    id: 'COT-2024-003', cliente: 'Flota Express Ltda', fecha: '2024-06-28', metodoPago: 'Contado', proveedor: 'Goodyear Colombia Ltda',
+    id: 'PED-2024-003', cliente: 'Flota Express Ltda', fecha: '2024-06-28', metodoPago: 'Contado', proveedor: 'Goodyear Colombia Ltda',
     total: '$ 4.692.000', confirmado: true, estado: 'Completada', estadoEntrega: 'Entregado',
     direccionEntrega: 'Av 3N #35-12, Cali', plazoDias: 0, interes: '$ 0', cuotaInicial: '$ 0',
     detalle: [
@@ -310,7 +310,7 @@ export const cotizaciones = [
     ],
   },
   {
-    id: 'COT-2024-004', cliente: 'Carlos Arbeláez Ossa', fecha: '2024-06-15', metodoPago: 'Contado', proveedor: 'Bridgestone de Colombia',
+    id: 'PED-2024-004', cliente: 'Carlos Arbeláez Ossa', fecha: '2024-06-15', metodoPago: 'Contado', proveedor: 'Bridgestone de Colombia',
     total: '$ 447.000', confirmado: true, estado: 'Rechazada', estadoEntrega: 'Cancelado',
     direccionEntrega: 'Cra 15 #20-40, Barranquilla', plazoDias: 0, interes: '$ 0', cuotaInicial: '$ 0',
     motivoCancelacion: 'El cliente desistió de la compra.',
@@ -319,7 +319,7 @@ export const cotizaciones = [
     ],
   },
   {
-    id: 'COT-2024-005', cliente: 'Servicios Terrestres SA', fecha: '2024-07-25', metodoPago: 'Crédito', proveedor: 'Bridgestone de Colombia',
+    id: 'PED-2024-005', cliente: 'Servicios Terrestres SA', fecha: '2024-07-25', metodoPago: 'Crédito', proveedor: 'Bridgestone de Colombia',
     total: '$ 0', confirmado: false, estado: 'Pendiente', estadoEntrega: 'Pendiente',
     direccionEntrega: 'Calle 80 #50-30, Bogotá', plazoDias: 60, interes: '$ 0', cuotaInicial: '$ 0',
     detalle: [
@@ -337,7 +337,7 @@ export const cotizaciones = [
 
 export const ventas = [
   {
-    id: 'VEN-2024-001', cliente: 'Transportes Andinos SAS', tercero: '', cotizacion: 'COT-2024-001',
+    id: 'VEN-2024-001', cliente: 'Transportes Andinos SAS', tercero: '', cotizacion: 'PED-2024-001',
     proveedor: 'Michelin Colombia SAS', estadoEntrega: 'Entregado',
     fecha: '2024-07-18', metodoPago: 'Contado', total: '$ 1.968.000', interes: '$ 0', cuotaInicial: '$ 0',
     estado: 'Completada',
@@ -346,7 +346,7 @@ export const ventas = [
     ],
   },
   {
-    id: 'VEN-2024-002', cliente: 'Flota Express Ltda', tercero: '', cotizacion: 'COT-2024-003',
+    id: 'VEN-2024-002', cliente: 'Flota Express Ltda', tercero: '', cotizacion: 'PED-2024-003',
     proveedor: 'Goodyear Colombia Ltda', estadoEntrega: 'Entregado',
     fecha: '2024-06-28', metodoPago: 'Contado', total: '$ 4.692.000', interes: '$ 0', cuotaInicial: '$ 0',
     estado: 'Completada',
@@ -385,17 +385,17 @@ export const ventas = [
 
 export const compras = [
   {
-    id: 'COM-2024-001', proveedor: 'Michelin Colombia SAS', cotizacion: 'COT-2024-001', fecha: '2024-07-10',
+    id: 'COM-2024-001', proveedor: 'Michelin Colombia SAS', cotizacion: 'PED-2024-001', fecha: '2024-07-10',
     total: '$ 1.512.000', estado: 'Recibida', estadoEntrega: 'Entregado',
     detalle: [{ producto: 'Michelin LTX Force', cantidad: 4, unitario: '$ 378.000', subtotal: '$ 1.512.000' }],
   },
   {
-    id: 'COM-2024-002', proveedor: 'Bridgestone de Colombia', cotizacion: 'COT-2024-005', fecha: '2024-07-26',
+    id: 'COM-2024-002', proveedor: 'Bridgestone de Colombia', cotizacion: 'PED-2024-005', fecha: '2024-07-26',
     total: '$ 1.872.000', estado: 'Pendiente', estadoEntrega: 'En camino',
     detalle: [{ producto: 'Bridgestone Alenza 001', cantidad: 4, unitario: '$ 468.000', subtotal: '$ 1.872.000' }],
   },
   {
-    id: 'COM-2024-003', proveedor: 'Goodyear Colombia Ltda', cotizacion: 'COT-2024-003', fecha: '2024-06-20',
+    id: 'COM-2024-003', proveedor: 'Goodyear Colombia Ltda', cotizacion: 'PED-2024-003', fecha: '2024-06-20',
     total: '$ 3.596.000', estado: 'Recibida', estadoEntrega: 'Entregado',
     detalle: [
       { producto: 'Goodyear KMax D', cantidad: 3, unitario: '$ 960.000', subtotal: '$ 2.880.000' },
@@ -496,7 +496,7 @@ export const systemAlerts = [
   { id: 1, type: 'warning', text: 'Stock crítico: Michelin LTX Force — 4 unid.' },
   { id: 2, type: 'danger', text: 'Crédito CRE-002 vence en 5 días — María García Ruiz' },
   { id: 3, type: 'info', text: 'Compra COM-2024-002 en camino desde Bridgestone' },
-  { id: 4, type: 'warning', text: 'Cotización COT-2024-005 sin valor confirmado' },
+  { id: 4, type: 'warning', text: 'Cotización PED-2024-005 sin valor confirmado' },
   { id: 5, type: 'warning', text: 'Solicitud SOL-003 sin reencauchadora asignada' },
   { id: 6, type: 'warning', text: 'Abono ABO-005 pendiente de validar la consignación' },
   { id: 7, type: 'warning', text: 'Solicitud de crédito SLC-001 sin revisar' },
@@ -536,7 +536,7 @@ export const adminProfile = {
  */
 export const clientCotizaciones = [
   {
-    id: 'COT-2024-002', fecha: '2024-07-16', metodoPago: 'Crédito', items: 4, total: '$ 798.250',
+    id: 'PED-2024-002', fecha: '2024-07-16', metodoPago: 'Crédito', items: 4, total: '$ 798.250',
     estado: 'En proceso', estadoEntrega: 'Pendiente', direccionEntrega: 'Calle 50 #45-12, Medellín',
     plazoDias: 30, interes: '$ 23.250', cuotaInicial: '$ 399.125',
     detalle: [
@@ -545,7 +545,7 @@ export const clientCotizaciones = [
     ],
   },
   {
-    id: 'COT-2024-008', fecha: '2024-07-09', metodoPago: 'Contado', items: 2, total: '$ 1.240.000',
+    id: 'PED-2024-008', fecha: '2024-07-09', metodoPago: 'Contado', items: 2, total: '$ 1.240.000',
     estado: 'Completada', estadoEntrega: 'En camino', direccionEntrega: 'Calle 50 #45-12, Medellín',
     plazoDias: 0, interes: '$ 0', cuotaInicial: '$ 0',
     detalle: [
@@ -553,7 +553,7 @@ export const clientCotizaciones = [
     ],
   },
   {
-    id: 'COT-2024-014', fecha: '2024-06-28', metodoPago: 'Crédito', items: 6, total: '$ 3.069.400',
+    id: 'PED-2024-014', fecha: '2024-06-28', metodoPago: 'Crédito', items: 6, total: '$ 3.069.400',
     estado: 'Completada', estadoEntrega: 'Entregado', direccionEntrega: 'Calle 50 #45-12, Medellín',
     plazoDias: 60, interes: '$ 89.400', cuotaInicial: '$ 1.534.700',
     detalle: [
@@ -562,7 +562,7 @@ export const clientCotizaciones = [
     ],
   },
   {
-    id: 'COT-2024-019', fecha: '2024-06-15', metodoPago: 'Contado', items: 1, total: '$ 320.000',
+    id: 'PED-2024-019', fecha: '2024-06-15', metodoPago: 'Contado', items: 1, total: '$ 320.000',
     estado: 'Rechazada', estadoEntrega: 'Cancelado', direccionEntrega: 'Calle 50 #45-12, Medellín',
     plazoDias: 0, interes: '$ 0', cuotaInicial: '$ 0',
     motivoCancelacion: 'La carcasa no pasó la revisión de la reencauchadora.',
@@ -571,7 +571,7 @@ export const clientCotizaciones = [
     ],
   },
   {
-    id: 'COT-2024-023', fecha: '2024-06-02', metodoPago: 'Contado', items: 4, total: '$ 1.560.000',
+    id: 'PED-2024-023', fecha: '2024-06-02', metodoPago: 'Contado', items: 4, total: '$ 1.560.000',
     estado: 'Completada', estadoEntrega: 'Entregado', direccionEntrega: 'Cra 43A #7-50, Medellín',
     plazoDias: 0, interes: '$ 0', cuotaInicial: '$ 0',
     detalle: [
@@ -580,7 +580,7 @@ export const clientCotizaciones = [
     ],
   },
   {
-    id: 'COT-2024-027', fecha: '2024-05-21', metodoPago: 'Contado', items: 2, total: '$ 890.000',
+    id: 'PED-2024-027', fecha: '2024-05-21', metodoPago: 'Contado', items: 2, total: '$ 890.000',
     estado: 'Completada', estadoEntrega: 'Entregado', direccionEntrega: 'Calle 50 #45-12, Medellín',
     plazoDias: 0, interes: '$ 0', cuotaInicial: '$ 0',
     detalle: [
@@ -589,7 +589,7 @@ export const clientCotizaciones = [
     ],
   },
   {
-    id: 'COT-2024-031', fecha: '2024-05-08', metodoPago: 'Crédito', items: 8, total: '$ 4.367.200',
+    id: 'PED-2024-031', fecha: '2024-05-08', metodoPago: 'Crédito', items: 8, total: '$ 4.367.200',
     estado: 'Completada', estadoEntrega: 'Entregado', direccionEntrega: 'Calle 50 #45-12, Medellín',
     plazoDias: 60, interes: '$ 247.200', cuotaInicial: '$ 2.183.600',
     detalle: [
@@ -598,7 +598,7 @@ export const clientCotizaciones = [
     ],
   },
   {
-    id: 'COT-2024-035', fecha: '2024-04-27', metodoPago: 'Contado', items: 2, total: '$ 640.000',
+    id: 'PED-2024-035', fecha: '2024-04-27', metodoPago: 'Contado', items: 2, total: '$ 640.000',
     estado: 'Completada', estadoEntrega: 'Entregado', direccionEntrega: 'Calle 50 #45-12, Medellín',
     plazoDias: 0, interes: '$ 0', cuotaInicial: '$ 0',
     detalle: [
@@ -606,7 +606,7 @@ export const clientCotizaciones = [
     ],
   },
   {
-    id: 'COT-2024-040', fecha: '2024-04-11', metodoPago: 'Contado', items: 4, total: '$ 1.780.000',
+    id: 'PED-2024-040', fecha: '2024-04-11', metodoPago: 'Contado', items: 4, total: '$ 1.780.000',
     estado: 'Completada', estadoEntrega: 'Entregado', direccionEntrega: 'Calle 50 #45-12, Medellín',
     plazoDias: 0, interes: '$ 0', cuotaInicial: '$ 0',
     detalle: [
@@ -615,7 +615,7 @@ export const clientCotizaciones = [
     ],
   },
   {
-    id: 'COT-2024-044', fecha: '2024-03-30', metodoPago: 'Contado', items: 1, total: '$ 415.000',
+    id: 'PED-2024-044', fecha: '2024-03-30', metodoPago: 'Contado', items: 1, total: '$ 415.000',
     estado: 'Completada', estadoEntrega: 'Entregado', direccionEntrega: 'Calle 50 #45-12, Medellín',
     plazoDias: 0, interes: '$ 0', cuotaInicial: '$ 0',
     detalle: [
@@ -623,7 +623,7 @@ export const clientCotizaciones = [
     ],
   },
   {
-    id: 'COT-2024-049', fecha: '2024-03-14', metodoPago: 'Contado', items: 4, total: '$ 1.290.000',
+    id: 'PED-2024-049', fecha: '2024-03-14', metodoPago: 'Contado', items: 4, total: '$ 1.290.000',
     estado: 'Completada', estadoEntrega: 'Entregado', direccionEntrega: 'Calle 50 #45-12, Medellín',
     plazoDias: 0, interes: '$ 0', cuotaInicial: '$ 0',
     detalle: [
@@ -632,7 +632,7 @@ export const clientCotizaciones = [
     ],
   },
   {
-    id: 'COT-2024-053', fecha: '2024-02-26', metodoPago: 'Contado', items: 2, total: '$ 720.000',
+    id: 'PED-2024-053', fecha: '2024-02-26', metodoPago: 'Contado', items: 2, total: '$ 720.000',
     estado: 'Completada', estadoEntrega: 'Entregado', direccionEntrega: 'Calle 50 #45-12, Medellín',
     plazoDias: 0, interes: '$ 0', cuotaInicial: '$ 0',
     detalle: [
@@ -643,9 +643,9 @@ export const clientCotizaciones = [
 
 /** Cartera del cliente en sesión: sus créditos y los abonos de cada uno. */
 export const clientCreditos = [
-  { id: 'CRE-002', venta: 'VEN-2024-003', cotizacion: 'COT-2024-014', montoTotal: '$ 3.069.400', saldoPendiente: '$ 575.000', plazoDias: 60, fechaApertura: '2024-07-02', fechaLimite: '2024-08-31', estado: 'Activo' },
-  { id: 'CRE-011', venta: '', cotizacion: 'COT-2024-031', montoTotal: '$ 4.367.200', saldoPendiente: '$ 0', plazoDias: 60, fechaApertura: '2024-05-08', fechaLimite: '2024-07-07', estado: 'Inactivo' },
-  { id: 'CRE-008', venta: '', cotizacion: 'COT-2024-002', montoTotal: '$ 798.250', saldoPendiente: '$ 0', plazoDias: 30, fechaApertura: '2024-07-16', fechaLimite: '2024-08-15', estado: 'Inactivo' },
+  { id: 'CRE-002', venta: 'VEN-2024-003', cotizacion: 'PED-2024-014', montoTotal: '$ 3.069.400', saldoPendiente: '$ 575.000', plazoDias: 60, fechaApertura: '2024-07-02', fechaLimite: '2024-08-31', estado: 'Activo' },
+  { id: 'CRE-011', venta: '', cotizacion: 'PED-2024-031', montoTotal: '$ 4.367.200', saldoPendiente: '$ 0', plazoDias: 60, fechaApertura: '2024-05-08', fechaLimite: '2024-07-07', estado: 'Inactivo' },
+  { id: 'CRE-008', venta: '', cotizacion: 'PED-2024-002', montoTotal: '$ 798.250', saldoPendiente: '$ 0', plazoDias: 30, fechaApertura: '2024-07-16', fechaLimite: '2024-08-15', estado: 'Inactivo' },
 ];
 
 export const clientAbonos = [
@@ -662,9 +662,9 @@ export const clientSolicitudesCredito = [
 ];
 
 export const clientHomeStats = [
-  { id: 'cotizaciones', label: 'MIS COTIZACIONES', value: '12', sub: '1 en proceso', icon: 'FileText', accent: 'amber' },
-  { id: 'entrega', label: 'PRÓXIMA ENTREGA', value: 'COT-008', sub: 'En camino', icon: 'Truck', accent: 'blue' },
-  { id: 'cartera', label: 'SALDO PENDIENTE', value: '$ 575.000', sub: 'En su crédito vigente', icon: 'CreditCard', accent: 'emerald' },
+  { id: 'pedidos', label: 'MIS PEDIDOS-COTIZACIÓN', value: '12', sub: '1 cotización pendiente', icon: 'FileText', accent: 'amber' },
+  { id: 'entrega', label: 'PRÓXIMA ENTREGA', value: '22 Jul', sub: 'PED-2024-008 · en camino', icon: 'Truck', accent: 'blue' },
+  { id: 'credito', label: 'MI CRÉDITO', value: '$ 575.000', sub: 'Saldo pendiente de tu crédito', icon: 'CreditCard', accent: 'emerald' },
   { id: 'total', label: 'TOTAL COMPRADO', value: '$ 16.730.000', sub: 'Este año', icon: 'DollarSign', accent: 'violet' },
 ];
 
@@ -691,7 +691,7 @@ export const clienteSinCredito = {
   },
   cotizaciones: [
     {
-      id: 'COT-2024-061', fecha: '2024-07-22', metodoPago: 'Contado', items: 2, total: '$ 894.000',
+      id: 'PED-2024-061', fecha: '2024-07-22', metodoPago: 'Contado', items: 2, total: '$ 894.000',
       estado: 'Completada', estadoEntrega: 'Entregado', direccionEntrega: 'Cra 5 #10-22, Pereira',
       plazoDias: 0, interes: '$ 0', cuotaInicial: '$ 0',
       detalle: [
@@ -699,7 +699,7 @@ export const clienteSinCredito = {
       ],
     },
     {
-      id: 'COT-2024-064', fecha: '2024-07-30', metodoPago: 'Contado', items: 4, total: '$ 1.860.000',
+      id: 'PED-2024-064', fecha: '2024-07-30', metodoPago: 'Contado', items: 4, total: '$ 1.860.000',
       estado: 'En proceso', estadoEntrega: 'En camino', direccionEntrega: 'Cra 5 #10-22, Pereira',
       plazoDias: 0, interes: '$ 0', cuotaInicial: '$ 0',
       detalle: [
@@ -707,7 +707,7 @@ export const clienteSinCredito = {
       ],
     },
     {
-      id: 'COT-2024-068', fecha: '2024-08-02', metodoPago: 'Contado', items: 2, total: '$ 640.000',
+      id: 'PED-2024-068', fecha: '2024-08-02', metodoPago: 'Contado', items: 2, total: '$ 640.000',
       estado: 'Pendiente', estadoEntrega: 'Pendiente', direccionEntrega: 'Cra 5 #10-22, Pereira',
       plazoDias: 0, interes: '$ 0', cuotaInicial: '$ 0',
       detalle: [
@@ -720,9 +720,9 @@ export const clienteSinCredito = {
   abonos: [],
   solicitudesCredito: [],
   homeStats: [
-    { id: 'cotizaciones', label: 'MIS COTIZACIONES', value: '3', sub: '1 en proceso', icon: 'FileText', accent: 'amber' },
-    { id: 'entrega', label: 'PRÓXIMA ENTREGA', value: 'COT-064', sub: 'En camino', icon: 'Truck', accent: 'blue' },
-    { id: 'cartera', label: 'SALDO PENDIENTE', value: '$ 0', sub: 'Sin créditos abiertos', icon: 'CreditCard', accent: 'emerald' },
+    { id: 'pedidos', label: 'MIS PEDIDOS-COTIZACIÓN', value: '3', sub: '1 cotización en proceso', icon: 'FileText', accent: 'amber' },
+    { id: 'entrega', label: 'PRÓXIMA ENTREGA', value: '30 Jul', sub: 'PED-2024-064 · en camino', icon: 'Truck', accent: 'blue' },
+    { id: 'credito', label: 'MI CRÉDITO', value: '$ 0', sub: 'Sin créditos abiertos', icon: 'CreditCard', accent: 'emerald' },
     { id: 'total', label: 'TOTAL COMPRADO', value: '$ 3.394.000', sub: 'Este año', icon: 'DollarSign', accent: 'violet' },
   ],
 };
