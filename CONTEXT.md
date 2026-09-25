@@ -748,3 +748,18 @@ arrastra de una cuenta a otra.
   saldo usable, y el bloque "Mis Pedidos-Cotización Recientes".
 - Los códigos de la cotización-pedido vuelven al prefijo **PED-**, que es el
   que usa el módulo en pantalla.
+
+## Detalle del abono y resumen de la cartera
+
+- **Detalle del abono** (`src/features/portal/DetalleAbonoModal.jsx`): en Mi
+  cartera cada abono del historial es pulsable y abre su detalle con el
+  monto, el estado de la validación y el comprobante a la vista. Los abonos
+  por transferencia traen un pantallazo de ejemplo (`comprobanteDemo` en
+  `mockData.js`), porque sin backend no hay archivos subidos; los pagos en
+  efectivo o con tarjeta muestran un aviso en lugar de la imagen.
+- **Saldo usable** (`src/components/layout/SaldoUsableMenu.jsx`): el chip del
+  navbar del cliente pasa a ser un desplegable con el resumen mínimo de la
+  cartera —saldo, crédito abierto, monto financiado y saldo pendiente— y un
+  botón "Ver más" que lleva a `/portal/cartera`.
+- El **detalle de la cotización-pedido** ya no repite el bloque de
+  financiación: esas condiciones viven en la cartera.

@@ -648,11 +648,32 @@ export const clientCreditos = [
   { id: 'CRE-008', venta: '', cotizacion: 'PED-2024-002', montoTotal: '$ 798.250', saldoPendiente: '$ 0', plazoDias: 30, fechaApertura: '2024-07-16', fechaLimite: '2024-08-15', estado: 'Inactivo' },
 ];
 
+/**
+ * Pantallazo de consignacion de ejemplo. Sin backend no hay archivos
+ * subidos, asi que los abonos por transferencia traen esta imagen para que
+ * el detalle del abono se pueda ver completo.
+ */
+export const comprobanteDemo =
+  'data:image/svg+xml;charset=utf-8,' +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="420" height="260">
+       <rect width="420" height="260" fill="#0F172A"/>
+       <rect x="16" y="16" width="388" height="228" rx="14" fill="#F8FAFC"/>
+       <rect x="16" y="16" width="388" height="52" rx="14" fill="#FBBF24"/>
+       <text x="36" y="49" font-family="Arial" font-size="17" font-weight="bold" fill="#0F172A">Transferencia exitosa</text>
+       <text x="36" y="104" font-family="Arial" font-size="12" fill="#64748B">Destino</text>
+       <text x="36" y="124" font-family="Arial" font-size="14" font-weight="bold" fill="#0F172A">MiraLlantas SAS - Ahorros 4780</text>
+       <text x="36" y="158" font-family="Arial" font-size="12" fill="#64748B">Valor</text>
+       <text x="36" y="180" font-family="Arial" font-size="20" font-weight="bold" fill="#0F172A">Comprobante de pago</text>
+       <text x="36" y="214" font-family="Arial" font-size="12" fill="#64748B">Aprobacion 00918342 - Banco de ejemplo</text>
+     </svg>`,
+  );
+
 export const clientAbonos = [
   { id: 'ABO-002', credito: 'CRE-002', fecha: '2024-07-02', monto: '$ 1.534.700', metodoPago: 'Tarjeta', comprobante: '', estado: 'Confirmado' },
-  { id: 'ABO-003', credito: 'CRE-002', fecha: '2024-07-30', monto: '$ 959.700', metodoPago: 'Transferencia', comprobante: '', estado: 'Confirmado' },
+  { id: 'ABO-003', credito: 'CRE-002', fecha: '2024-07-30', monto: '$ 959.700', metodoPago: 'Transferencia', comprobante: comprobanteDemo, estado: 'Confirmado' },
   { id: 'ABO-005', credito: 'CRE-002', fecha: '2024-08-04', monto: '$ 200.000', metodoPago: 'Tarjeta', comprobante: '', estado: 'Pendiente' },
-  { id: 'ABO-021', credito: 'CRE-011', fecha: '2024-06-20', monto: '$ 4.367.200', metodoPago: 'Transferencia', comprobante: '', estado: 'Confirmado' },
+  { id: 'ABO-021', credito: 'CRE-011', fecha: '2024-06-20', monto: '$ 4.367.200', metodoPago: 'Transferencia', comprobante: comprobanteDemo, estado: 'Confirmado' },
   { id: 'ABO-017', credito: 'CRE-008', fecha: '2024-07-20', monto: '$ 798.250', metodoPago: 'Efectivo', comprobante: '', estado: 'Confirmado' },
 ];
 

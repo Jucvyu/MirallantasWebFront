@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { LockKeyhole, LogOut, Menu, Wallet, X } from 'lucide-react';
+import { LockKeyhole, LogOut, Menu, X } from 'lucide-react';
 import { NavLink, Link } from 'react-router-dom';
-import { useCredito } from '../../context/CreditoContext';
 import Logo from '../base/Logo';
 import ThemeToggle from '../base/ThemeToggle';
 import PerfilMenu from './PerfilMenu';
+import SaldoUsableMenu from './SaldoUsableMenu';
 
 const LINKS = [
   { to: '/portal', label: 'Inicio', end: true },
@@ -22,7 +22,6 @@ const linkClass = ({ isActive }) =>
 
 export default function ClientNavbar({ profile, onEditarPerfil }) {
   const [open, setOpen] = useState(false);
-  const { saldoUsableTexto, tieneCredito } = useCredito();
 
   // Detalle inicial que se ve en el desplegable del avatar
   const campos = [
@@ -57,21 +56,8 @@ export default function ClientNavbar({ profile, onEditarPerfil }) {
             <LockKeyhole size={13} />
           </Link>
 
-          {/* Saldo de crédito disponible, siempre a la vista */}
-          <span
-            title={
-              tieneCredito
-                ? 'Tienes un crédito abierto: el saldo queda en negativo hasta saldarlo'
-                : 'Cupo de crédito disponible'
-            }
-            className={`hidden items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold sm:inline-flex ${
-              tieneCredito
-                ? 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400'
-                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-            }`}
-          >
-            <Wallet size={12} /> Saldo usable: {saldoUsableTexto}
-          </span>
+          {/* Saldo de crédito disponible, con el resumen de la cartera */}
+          <SaldoUsableMenu />
 
           {/* La foto despliega el detalle del perfil, igual que en el admin */}
           <PerfilMenu profile={profile} campos={campos} onEditar={onEditarPerfil} />

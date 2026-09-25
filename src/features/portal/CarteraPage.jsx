@@ -5,6 +5,7 @@ import StatCard from '../../components/base/StatCard';
 import { useAbonos } from '../../context/AbonosContext';
 import { useCredito } from '../../context/CreditoContext';
 import { useSesion } from '../../context/SesionContext';
+import DetalleAbonoModal from './DetalleAbonoModal';
 import RegistrarAbonoModal from './RegistrarAbonoModal';
 import SolicitarCreditoModal from './SolicitarCreditoModal';
 
@@ -36,6 +37,8 @@ export default function CarteraPage() {
   const { creditos, solicitudesCredito } = useSesion();
 
   const [abonoDe, setAbonoDe] = useState(null);
+  // Abono cuyo detalle se está mirando
+  const [abonoVisto, setAbonoVisto] = useState(null);
   const [solicitando, setSolicitando] = useState(false);
   const [solicitudes, setSolicitudes] = useState(solicitudesCredito);
 
@@ -136,17 +139,24 @@ export default function CarteraPage() {
               {abonosDel.length > 0 && (
                 <ul className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200 dark:divide-white/5 dark:border-white/10">
                   {abonosDel.map((a) => (
-                    <li key={a.id} className="flex items-center gap-2 px-3 py-2">
-                      <Receipt size={13} className="shrink-0 text-slate-400" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-bold text-slate-800 dark:text-slate-100">
-                          {a.id} · {a.monto}
-                        </p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                          {a.fecha} · {a.metodoPago}
-                        </p>
-                      </div>
-                      <Badge>{a.estado}</Badge>
+                    <li key={a.id}>
+                      <button
+                        type="button"
+                        onClick={() => setAbonoVisto(a)}
+                        title="Ver el detalle del abono"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-slate-50 dark:hover:bg-white/5"
+                      >
+                        <Receipt size={13} className="shrink-0 text-slate-400" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-bold text-slate-800 dark:text-slate-100">
+                            {a.id} · {a.monto}
+                          </p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                            {a.fecha} · {a.metodoPago}
+                          </p>
+                        </div>
+                        <Badge>{a.estado}</Badge>
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -197,6 +207,9 @@ export default function CarteraPage() {
         )}
       </div>
 
+      {abonoVisto && (
+        <DetalleAbonoModal abono={abonoVisto} onClose={() => setAbonoVisto(null)} />
+      )}
       {abonoDe && (
         <RegistrarAbonoModal creditoId={abonoDe.id} onSubmit={addAbono} onClose={() => setAbonoDe(null)} />
       )}

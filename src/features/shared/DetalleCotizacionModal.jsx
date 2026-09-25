@@ -8,7 +8,8 @@ import Modal from '../../components/base/Modal';
  * Muestra en una sola tabla las líneas de producto (`detalle_venta`) y las
  * de servicio (`detalle_servicio`), que es lo que pide el caso de uso "ver
  * detalle de la cotización-pedido", junto con la cabecera comercial y el
- * estado de la entrega.
+ * estado de la entrega. La financiación no se repite aquí: cuando el pedido
+ * se paga a crédito, esas condiciones viven en la cartera.
  */
 export default function DetalleCotizacionModal({ cotizacion, onClose }) {
   const lineas = cotizacion.detalle ?? [];
@@ -49,31 +50,6 @@ export default function DetalleCotizacionModal({ cotizacion, onClose }) {
             </div>
           ))}
         </section>
-
-        {/* ---- Financiación, solo si se pactó crédito ---- */}
-        {cotizacion.metodoPago === 'Crédito' && (
-          <section className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-600 dark:text-emerald-400">
-              Financiación
-            </p>
-            <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
-              <div>
-                <dt className="text-xs text-slate-500 dark:text-slate-400">Plazo</dt>
-                <dd className="font-semibold text-slate-800 dark:text-slate-100">
-                  {cotizacion.plazoDias} días
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-slate-500 dark:text-slate-400">Interés</dt>
-                <dd className="font-semibold text-slate-800 dark:text-slate-100">{cotizacion.interes}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-slate-500 dark:text-slate-400">Cuota inicial (50%)</dt>
-                <dd className="font-semibold text-slate-800 dark:text-slate-100">{cotizacion.cuotaInicial}</dd>
-              </div>
-            </dl>
-          </section>
-        )}
 
         {/* ---- Productos y servicios en una sola tabla ---- */}
         <section>
