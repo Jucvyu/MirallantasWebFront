@@ -1,5 +1,15 @@
 import { useMemo, useState } from 'react';
-import { Check, ChevronDown, FileText, Plus, Search, ShoppingCart, Trash2 } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  FileText,
+  Plus,
+  Search,
+  ShoppingCart,
+  Trash2,
+} from 'lucide-react';
 import Modal from '../../../components/base/Modal';
 import {
   BORDER_ERR as BORDE_ERR,
@@ -17,6 +27,52 @@ const esAbastecible = (c) => c.estado === 'Aprobada' || c.estado === 'En proceso
 
 const pesos = (n) => `$ ${n.toLocaleString('es-CO')}`;
 
+/** Secciones del formulario, en orden. */
+const SECCIONES = ['cotizacion', 'proveedor', 'productos', 'detalle'];
+
+/**
+ * Bloque desplegable reutilizable.
+ * - `resumen`: texto corto que se muestra cuando está contraído.
+ * - `extra`: contenido a la derecha del título (badges, contadores).
+ * - `error`: resalta el borde si la sección tiene errores.
+ */
+function SeccionDesplegable({ id, titulo, abierta, onToggle, resumen, extra, error, children }) {
+  const panelId = `seccion-${id}`;
+  return (
+    <section
+      className={`overflow-hidden rounded-xl border transition-colors ${
+        error ? 'border-red-400' : 'border-slate-200 dark:border-white/10'
+      }`}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={abierta}
+        aria-controls={panelId}
+        className="flex w-full items-center gap-3 bg-slate-50 px-4 py-3 text-left hover:bg-slate-100 dark:bg-brand-navy-900 dark:hover:bg-brand-navy-800"
+      >
+        <span className={SECTION}>{titulo}</span>
+        {!abierta && resumen && (
+          <span className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">· {resumen}</span>
+        )}
+        <span className="flex-1" />
+        {extra}
+        {error && <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" aria-label="Sección con errores" />}
+        <ChevronDown
+          size={16}
+          className={`shrink-0 text-slate-400 transition-transform duration-200 ${abierta ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {abierta && (
+        <div id={panelId} className="border-t border-slate-200 p-4 dark:border-white/10">
+          {children}
+        </div>
+      )}
+    </section>
+  );
+}
+
 /**
  * "Nueva compra" (orden de compra al proveedor).
  *
@@ -26,6 +82,8 @@ const pesos = (n) => `$ ${n.toLocaleString('es-CO')}`;
  * productos extra que quiera pedirle al mismo proveedor. Cada línea guarda
  * cantidad y precio de compra, igual que `detalle_compra`. La fecha es la
  * de hoy y la compra nace pendiente, con la entrega también pendiente.
+ *
+ * Cada sección es desplegable; un botón superior expande o contrae todas.
  */
 export default function NuevaCompraModal({ onSubmit, onClose }) {
   const [proveedor, setProveedor] = useState('');
@@ -33,6 +91,18 @@ export default function NuevaCompraModal({ onSubmit, onClose }) {
   const [lineas, setLineas] = useState([]);
   const [query, setQuery] = useState('');
   const [errores, setErrores] = useState({});
+  const [abiertas, setAbiertas] = useState({
+    cotizacion: true,
+    proveedor: true,
+    productos: false,
+    detalle: true,
+  });
+
+  const todasAbiertas = SECCIONES.every((s) => abiertas[s]);
+  const alternar = (s) => setAbiertas((a) => ({ ...a, [s]: !a[s] }));
+  const alternarTodas = () =>
+    setAbiertas(Object.fromEntries(SECCIONES.map((s) => [s, !todasAbiertas])));
+  const abrir = (...ss) => setAbiertas((a) => ({ ...a, ...Object.fromEntries(ss.map((s) => [s, true])) }));
 
   const catalogo = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -67,6 +137,8 @@ export default function NuevaCompraModal({ onSubmit, onClose }) {
           };
         }),
     );
+    // Muestra el detalle recién cargado
+    abrir('detalle');
   };
 
   const agregar = (p) => {
@@ -92,7 +164,12 @@ export default function NuevaCompraModal({ onSubmit, onClose }) {
     if (!proveedor) next.proveedor = 'Selecciona el proveedor';
     if (lineas.length === 0) next.lineas = 'Agrega al menos un producto a la compra';
     setErrores(next);
-    if (Object.keys(next).length > 0) return;
+    if (Object.keys(next).length > 0) {
+      // Despliega las secciones con errores para que se vean
+      if (next.proveedor) abrir('proveedor');
+      if (next.lineas) abrir('detalle', 'productos');
+      return;
+    }
 
     onSubmit?.({
       proveedor,
@@ -139,13 +216,27 @@ export default function NuevaCompraModal({ onSubmit, onClose }) {
         </>
       )}
     >
-      <div className="space-y-6">
+      <div className="space-y-3">
+        {/* ---- Botón general: expandir / contraer todo ---- */}
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={alternarTodas}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-brand-navy-800"
+          >
+            {todasAbiertas ? <ChevronsDownUp size={14} /> : <ChevronsUpDown size={14} />}
+            {todasAbiertas ? 'Contraer todo' : 'Expandir todo'}
+          </button>
+        </div>
+
         {/* ---- Cotización de origen ---- */}
-        <section>
-          <div className="mb-3 flex items-center gap-3">
-            <span className={SECTION}>Cotización de origen</span>
-            <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-          </div>
+        <SeccionDesplegable
+          id="cotizacion"
+          titulo="Cotización de origen"
+          abierta={abiertas.cotizacion}
+          onToggle={() => alternar('cotizacion')}
+          resumen={cotizacion ? `Cotización ${cotizacion}` : 'Sin seleccionar'}
+        >
           <SelectorCotizaciones
             value={cotizacion}
             filtro={esAbastecible}
@@ -155,14 +246,17 @@ export default function NuevaCompraModal({ onSubmit, onClose }) {
           <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
             Al elegirla, sus productos pasan al detalle de la compra; las cantidades deben coincidir.
           </p>
-        </section>
+        </SeccionDesplegable>
 
         {/* ---- Proveedor ---- */}
-        <section>
-          <div className="mb-3 flex items-center gap-3">
-            <span className={SECTION}>Proveedor</span>
-            <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-          </div>
+        <SeccionDesplegable
+          id="proveedor"
+          titulo="Proveedor"
+          abierta={abiertas.proveedor}
+          onToggle={() => alternar('proveedor')}
+          resumen={proveedor || 'Sin seleccionar'}
+          error={!!errores.proveedor}
+        >
           <div className="sm:w-1/2">
             <label htmlFor="co-proveedor" className={LABEL}>
               Proveedor <span className="text-red-500">*</span>
@@ -194,22 +288,24 @@ export default function NuevaCompraModal({ onSubmit, onClose }) {
             </div>
             {errores.proveedor && <p className="mt-1 text-xs font-medium text-red-500">{errores.proveedor}</p>}
           </div>
-        </section>
+        </SeccionDesplegable>
 
         {/* ---- Productos del catálogo ---- */}
-        <section>
-          <div className="mb-3 flex flex-wrap items-center gap-3">
-            <span className={SECTION}>Productos</span>
-            <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-            <div className="relative w-full sm:w-56">
-              <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar producto..."
-                className={`${CAMPO} ${BORDE_OK} py-2 pl-9`}
-              />
-            </div>
+        <SeccionDesplegable
+          id="productos"
+          titulo="Productos"
+          abierta={abiertas.productos}
+          onToggle={() => alternar('productos')}
+          resumen="Catálogo para agregar adicionales"
+        >
+          <div className="relative mb-3 w-full sm:w-56">
+            <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar producto..."
+              className={`${CAMPO} ${BORDE_OK} py-2 pl-9`}
+            />
           </div>
 
           <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-white/10">
@@ -252,20 +348,24 @@ export default function NuevaCompraModal({ onSubmit, onClose }) {
               </tbody>
             </table>
           </div>
-        </section>
+        </SeccionDesplegable>
 
         {/* ---- Detalle de la compra ---- */}
-        <section>
-          <div className="mb-3 flex flex-wrap items-center gap-3">
-            <span className={SECTION}>Detalle de la compra</span>
-            <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-            {deCotizacion > 0 && (
+        <SeccionDesplegable
+          id="detalle"
+          titulo="Detalle de la compra"
+          abierta={abiertas.detalle}
+          onToggle={() => alternar('detalle')}
+          resumen={`${lineas.length} ${lineas.length === 1 ? 'línea' : 'líneas'} · ${pesos(total)}`}
+          error={!!errores.lineas}
+          extra={
+            deCotizacion > 0 && (
               <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-amber-400/15 px-2 py-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
                 <FileText size={12} /> {deCotizacion} de la cotización
               </span>
-            )}
-          </div>
-
+            )
+          }
+        >
           {lineas.length === 0 ? (
             <div
               className={`rounded-xl border border-dashed py-10 text-center ${
@@ -338,14 +438,15 @@ export default function NuevaCompraModal({ onSubmit, onClose }) {
           )}
 
           {errores.lineas && <p className="mt-2 text-xs font-medium text-red-500">{errores.lineas}</p>}
+        </SeccionDesplegable>
 
-          <div className="mt-3 flex items-center justify-between rounded-xl border-2 border-amber-400 bg-amber-400/10 px-5 py-3">
-            <span className="text-sm font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              Total de la compra
-            </span>
-            <span className="text-xl font-bold text-slate-900 dark:text-white">{pesos(total)}</span>
-          </div>
-        </section>
+        {/* ---- Total: siempre visible, fuera de las secciones ---- */}
+        <div className="flex items-center justify-between rounded-xl border-2 border-amber-400 bg-amber-400/10 px-5 py-3">
+          <span className="text-sm font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+            Total de la compra
+          </span>
+          <span className="text-xl font-bold text-slate-900 dark:text-white">{pesos(total)}</span>
+        </div>
       </div>
     </Modal>
   );
