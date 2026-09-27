@@ -763,3 +763,23 @@ arrastra de una cuenta a otra.
   botón "Ver más" que lleva a `/portal/cartera`.
 - El **detalle de la cotización-pedido** ya no repite el bloque de
   financiación: esas condiciones viven en la cartera.
+
+## Botones "Productos" y "Servicios" en el detalle de la cotización
+
+En "Nueva cotización-pedido", el header de la tabla "Detalle de la
+cotización" tiene ahora dos botones de tres puntos al lado izquierdo:
+
+- **Productos** abre `SelectorProductosModal.jsx`
+  (`src/features/admin/shared/`), con todos los productos del sistema, el
+  mismo buscador y los mismos filtros del catálogo del portal (marca, tipo
+  de vehículo, medida, categoría). Agregar no cierra el modal, para poder
+  sumar varios productos seguidos; "Listo" lo cierra.
+- **Servicios** abre el mismo formulario de servicio que ya existía
+  (antes con el texto "Agregar servicio"), sin cambios en su contenido.
+
+La sección "Productos del catálogo" que ya estaba arriba del detalle no se
+tocó.
+
+Se quitó la sección "Productos del catálogo" que estaba encima del detalle
+en "Nueva cotización-pedido": ahora los productos solo se agregan desde el
+botón "Productos" descrito arriba, sin duplicar el listado en el formulario.

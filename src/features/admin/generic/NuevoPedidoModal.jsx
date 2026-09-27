@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Check, ChevronDown, FileText, Plus, Search, Trash2, Wrench } from 'lucide-react';
+import { useState } from 'react';
+import { Check, ChevronDown, FileText, MoreHorizontal, Trash2 } from 'lucide-react';
 import Modal from '../../../components/base/Modal';
 import FormModal from '../../../components/base/FormModal';
 import Badge from '../../../components/base/Badge';
@@ -18,12 +18,12 @@ import {
   INTERES_POR_PLAZO,
   metodosPago,
   PLAZOS_CREDITO,
-  productos,
   proveedores,
   servicios,
   SERVICIO_POR_DEFECTO,
 } from '../../../data/mockData';
 import { servicioInitialValues, servicioSectionsAdmin } from '../../shared/servicioSections';
+import SelectorProductosModal from '../shared/SelectorProductosModal';
 
 const pesos = (n) => `$ ${Math.round(n).toLocaleString('es-CO')}`;
 
@@ -32,10 +32,11 @@ let lineaSeq = 0;
 /**
  * "Nueva cotización-pedido" del administrador.
  *
- * El asesor arma el detalle: elige productos del catálogo —con su precio de
- * venta— y agrega líneas de servicio con el mismo formulario que usa el
- * cliente. Si el pago se pacta a crédito, el sistema calcula el interés
- * según el plazo y la cuota inicial del 50% que exige la empresa.
+ * El asesor arma el detalle desde los botones "Productos" y "Servicios"
+ * del propio detalle: el primero trae el catálogo completo con precio de
+ * venta, el segundo usa el mismo formulario de servicio que el cliente. Si
+ * el pago se pacta a crédito, el sistema calcula el interés según el plazo
+ * y la cuota inicial del 50% que exige la empresa.
  */
 export default function NuevoPedidoModal({ onSubmit, onClose }) {
   const [cliente, setCliente] = useState('');
@@ -48,17 +49,10 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
   const [inicialManual, setInicialManual] = useState('');
 
   const [lineas, setLineas] = useState([]);
-  const [query, setQuery] = useState('');
   const [servicioModal, setServicioModal] = useState(false);
+  // Todos los productos del sistema, con los filtros del catálogo
+  const [productosModal, setProductosModal] = useState(false);
   const [errors, setErrors] = useState({});
-
-  const catalogo = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    // Un producto inactivo ya no se ofrece en cotizaciones nuevas
-    const activos = productos.filter((p) => p.estado === 'Activo');
-    if (!q) return activos;
-    return activos.filter((p) => `${p.codigo} ${p.nombre} ${p.marca} ${p.medidas}`.toLowerCase().includes(q));
-  }, [query]);
 
   // ---- Totales: subtotal de las líneas, interés y cuota inicial --------
   const subtotal = lineas.reduce((suma, l) => suma + l.cantidad * l.unitario, 0);
@@ -171,7 +165,7 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
     <>
       <Modal
         title="Nueva cotización-pedido"
-        subtitle="Arma el detalle con productos del catálogo y servicios de reencauche."
+        subtitle="Arma el detalle desde los botones de productos y servicios."
         icon={<FileText size={17} />}
         size="xl"
         onClose={onClose}
@@ -371,86 +365,25 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
             )}
           </section>
 
-          {/* ---- Catálogo de productos ---- */}
-          <section>
-            <div className="mb-3 flex flex-wrap items-center gap-3">
-              <span className={SECTION}>Productos del catálogo</span>
-              <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-              <div className="relative w-full sm:w-56">
-                <Search
-                  size={15}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Buscar producto..."
-                  className={`${FIELD} ${BORDER_OK} py-2 pl-9 text-sm`}
-                />
-              </div>
-            </div>
-
-            <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-white/10">
-              <table className="w-full text-left text-sm">
-                <thead className="sticky top-0 bg-slate-50 dark:bg-brand-navy-900">
-                  <tr className="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-                    <th className="px-4 py-2.5">Producto</th>
-                    <th className="px-4 py-2.5">Stock</th>
-                    <th className="px-4 py-2.5 text-right">Precio venta</th>
-                    <th className="px-4 py-2.5" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {catalogo.map((p) => (
-                    <tr
-                      key={p.id}
-                      className="border-t border-slate-100 text-slate-600 dark:border-white/5 dark:text-slate-300"
-                    >
-                      <td className="px-4 py-2.5">
-                        <p className="font-semibold text-slate-800 dark:text-slate-100">{p.nombre}</p>
-                        <p className="text-xs text-slate-400 dark:text-slate-500">
-                          {p.codigo} · {p.medidas}
-                        </p>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <span className={p.stock === 0 ? 'font-semibold text-red-500' : ''}>{p.stock}</span>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-right">{pesos(p.precioVenta)}</td>
-                      <td className="px-4 py-2.5 text-right">
-                        <button
-                          type="button"
-                          onClick={() => agregarProducto(p)}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-amber-400 px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-amber-300"
-                        >
-                          <Plus size={13} /> Agregar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {catalogo.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-400">
-                        Ningún producto coincide con la búsqueda.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
           {/* ---- Detalle de la cotización ---- */}
           <section>
             <div className="mb-3 flex flex-wrap items-center gap-3">
               <span className={SECTION}>Detalle de la cotización</span>
-              <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+              <button
+                type="button"
+                onClick={() => setProductosModal(true)}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+              >
+                <MoreHorizontal size={14} /> Productos
+              </button>
               <button
                 type="button"
                 onClick={() => setServicioModal(true)}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-amber-400 px-3 py-1.5 text-xs font-bold text-amber-600 hover:bg-amber-400/10 dark:text-amber-400"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
               >
-                <Wrench size={14} /> Agregar servicio
+                <MoreHorizontal size={14} /> Servicios
               </button>
+              <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
             </div>
 
             {lineas.length === 0 ? (
@@ -463,7 +396,7 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
                   La cotización todavía no tiene líneas
                 </p>
                 <p className="mt-1 text-xs text-slate-400 dark:text-slate-600">
-                  Agrega productos de la tabla de arriba o registra un servicio.
+                  Usa los botones "Productos" o "Servicios" de arriba para empezar.
                 </p>
               </div>
             ) : (
@@ -571,6 +504,10 @@ export default function NuevoPedidoModal({ onSubmit, onClose }) {
           onSubmit={agregarServicio}
           onClose={() => setServicioModal(false)}
         />
+      )}
+
+      {productosModal && (
+        <SelectorProductosModal onAgregar={agregarProducto} onClose={() => setProductosModal(false)} />
       )}
     </>
   );
